@@ -22,9 +22,20 @@ enum FormStatus {
 
 enum QuestionType {
   TEXT
+  TEXTAREA
   EMAIL
+  NUMBER
+  PHONE
+  DATE
   CHOICE
+  RADIO
+  CHECKBOX
   YES_NO
+  RATING
+  RANGE
+  NPS
+  ADDRESS
+  FULL_NAME
 }
 
 enum WidgetPosition {
@@ -136,11 +147,17 @@ model Question {
   form       Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
   type       QuestionType
   label      String
-  options    Json? // CHOICE -> string[]
+  options    Json? // CHOICE / RADIO / CHECKBOX -> string[]
   required   Boolean      @default(true)
   order      Int
   prefillKey String?
-  answers    Answer[]
+  // Per-field appearance
+  placeholder String? // input placeholder
+  textColor   String? // #rrggbb - label / field text colour
+  fontSize    Int? // px
+  fontWeight  String? // normal | medium | semibold | bold
+  fontStyle   String? // normal | italic
+  answers     Answer[]
 
   @@index([formId, order])
 }

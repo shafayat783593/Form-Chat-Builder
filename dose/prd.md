@@ -49,28 +49,28 @@ AI features, payments/billing/subscriptions, workspaces/team invites, OAuth, ema
 | Public API | `GET /api/public/forms/{slug}` and `POST /api/public/forms/{slug}/responses` with server-side re-validation (400 / 404 / 422). |
 | Schema | `User` (with `role`), `Form`, `Question`, `Response`, `Answer` + `Role`, `FormStatus`, `QuestionType`, `WidgetPosition` enums; migrations `20261018175311_init`, `20261020120000_add_roles_templates`, `20261020130000_welcome_text_default`. |
 | Roles | `Role` enum + `User.role` + `requireAdmin()`/`requireAdminPage()`; `scripts/make-admin.ts`; `/admin/*` guarded (non-admin → `notFound()`); dashboard reads the real role from the session. |
+| Builder | `/dashboard/forms/[id]/edit` — 3 panels (palette / canvas / settings tabs), move up-down, duplicate, delete, options editor, Save + Publish, preview sheet, dirty tracking, optimistic concurrency (409). |
+| Chat + embed | `modules/chat` (shared by `/f/[slug]`, `/embed/[slug]`), one question at a time, POST once, 422 → jump back, `public/widget.js` (idempotent, `fw-` prefixed, Esc + `fw:close`). |
+| Templates | `modules/template` (service + actions + schema), admin CRUD, publish gate (≥ 1 question), copies keep working after delete (`sourceTemplateId → null`), public `/templates/[slug]` preview + "Use this template". |
+| Headers | `next.config.ts` sends `Access-Control-Allow-Origin: *` on `/api/public/*` and `Content-Security-Policy: frame-ancestors *` on `/embed/*`. |
 | Marketing page | Hero, Features, How it works, Demo section. |
 
 **Not built yet** (each row has a task in §11)
 
 | Missing | Task |
 |---|---|
-| Builder UI `/dashboard/forms/[id]/edit` (palette, canvas, settings tabs) | T8 |
-| Chat module, `/f/[slug]`, `/embed/[slug]` | T4 |
-| `public/widget.js`, `test-site/`, CORS + `frame-ancestors *` headers | T5 |
-| Responses pages `/dashboard/forms/[id]/responses` | T11 |
-| Templates (schema fields, module, `/templates`, `/admin/templates`) | T7, T10 |
+| Responses pages `/dashboard/forms/[id]/responses` (+ detail, delete) | T11 |
+| Templates gallery `/templates` list + landing "templates strip" | T12/T13 |
+| `test-site/index.html` + first Vercel deploy | T5 |
 | Rate limiting on the public POST | T14 |
-| Repo hygiene: `docs/PRD.md`, human `README.md`, `.env.example`, `cookies.txt` removal, `src/proxy.ts` | T1 |
+| Repo hygiene: `docs/PRD.md`, human `README.md`, `cookies.txt` removal | T1 |
 
 **Broken today** (dead links / lies in the UI — fix in the phase that builds the target)
 
-- `src/modules/form/components/form-row.tsx:58` — "View" links to `/f/{slug}`, which does not exist → 404 until T4.
-- `src/modules/public/home/demo-section.tsx:12` — loads `/widget.js`, which does not exist → the landing-page demo is dead until T5.
-- `src/modules/question/question.action.ts:11` — `editPath()` revalidates `/dashboard/forms/{id}/edit`, which does not exist → until T8.
-- `src/app/dashboard/layout.tsx:8` — hardcodes `role="ADMIN"`, and `src/modules/dashboard/ui/types.ts:1` still declares `"ADMIN" | "INSTRUCTOR" | "STUDENT"`. There is **no role in the database yet**; T6 replaces this with the real `ADMIN | OWNER` model.
-- `next.config.ts` has **no `headers()`** — no `Access-Control-Allow-Origin` on `/api/public/*` and no `frame-ancestors *` on `/embed/*`, so cross-origin use is blocked until T5.
-- `prisma/seed.ts` builds `new PrismaClient()` without the `PrismaPg` adapter and imports from `@prisma/client/extension` instead of the generated client — violates the Prisma 7 rules in §3.
+- `src/modules/public/home/demo-section.tsx:12` — loads `/widget.js`; the file now exists, but the landing demo needs `NEXT_PUBLIC_DEMO_FORM_SLUG` set to a published form (T12 wires it up).
+- `src/modules/question/question.action.ts:11` — `editPath()` revalidates `/dashboard/forms/{id}/edit`; that route now exists (T8), so this is consistent.
+- `prisma/seed.ts` — **fixed**: relative import from the generated client + `PrismaPg` adapter.
+- `next.config.ts` — **fixed**: `headers()` added (see above).
 
 ---
 
@@ -250,29 +250,29 @@ src/
 │  ├─ (public)/
 │  │  ├─ (marketing)/{layout.tsx, page.tsx}              # landing — exists
 │  │  ├─ (marketing)/templates/page.tsx                  # NEW — not yet built (T12/T13)
-│  │  ├─ (marketing)/templates/[slug]/page.tsx           # NEW — not yet built (T13)
+│  │  ├─ (marketing)/templates/[slug]/page.tsx           # NEW — exists at /templates/[slug] (T13 detail page)
 │  │  └─ (auth)/{layout.tsx, login/page.tsx, signup/page.tsx}  # exist
 │  ├─ admin/                                             # NEW — roles system
 │  │  ├─ layout.tsx                                      # requireAdminPage guard — exists
 │  │  ├─ page.tsx                                        # redirects to /admin/templates — exists
-│  │  └─ templates/{page.tsx, [id]/edit/page.tsx}        # page.tsx exists (read-only list); [id]/edit not yet built (T10)
+│  │  └─ templates/{page.tsx, [id]/edit/page.tsx}        # both exist
 │  ├─ dashboard/
 │  │  ├─ layout.tsx  page.tsx                            # exist
-│  │  └─ forms/[id]/{edit/page.tsx, responses/page.tsx, responses/[responseId]/page.tsx}  # NOT built (T8/T11)
-│  ├─ f/[slug]/page.tsx                                  # NEW — not yet built (T4)
-│  ├─ embed/[slug]/page.tsx                              # NEW — not yet built (T4)
+│  │  └─ forms/[id]/{edit/page.tsx, responses/page.tsx, responses/[responseId]/page.tsx}  # edit exists (T8); responses NOT built (T11)
+│  ├─ f/[slug]/page.tsx                                  # exists (T4)
+│  ├─ embed/[slug]/page.tsx                              # exists (T4)
 │  └─ api/{auth/[...all]/route.ts, public/forms/[slug]/{route.ts, responses/route.ts}}  # exist
 ├─ modules/
 │  ├─ auth/  form/  question/  response/                 # exist (services + actions + Zod)
-│  ├─ template/   {template.service.ts}                  # exists — read-only admin list; template.actions.ts/template.schema.ts not yet built (T7/T10)
-│  ├─ builder/                                           # NEW — not yet built (T8)
-│  ├─ chat/                                              # NEW — not yet built (T4)
+│  ├─ template/   {template.service.ts, template.actions.ts, template.schema.ts, create-template-dialog.tsx, templates-table.tsx, use-template-button.tsx}  # exist
+│  ├─ builder/                                           # exists (T8)
+│  ├─ chat/                                              # exists (T4) — chat.tsx, close-bar.tsx
 │  └─ public/home/{hero,features,how-it-works,demo-section}.tsx  # exist
 │     └─ {templates-strip,faq,cta}.tsx                   # NOT built (T12)
-├─ lib/{prisma,auth,auth-client,session,roles,errors,api,action,utils}.ts  # exist
-│  └─ {limits,rate-limit,slug}.ts                        # NOT built (limits.ts = hard rule #6)
-public/widget.js                                         # NEW — not yet built (T5)
-test-site/index.html                                     # NEW — not yet built (T5)
+├─ lib/{prisma,auth,auth-client,session,roles,errors,api,action,limits,slug,utils}.ts  # exist
+│  └─ rate-limit.ts                                      # NOT built (T14)
+public/widget.js                                         # exists (T5)
+test-site/index.html                                     # NOT built (T5)
 scripts/make-admin.ts                                    # NEW — exists (roles system)
 prisma/{schema.prisma, seed.ts, migrations/}             # exist
 ```
@@ -336,8 +336,7 @@ One shared `BuilderShell`; the page decides `mode: "form" | "template"` and pass
 
 **State:** `useReducer` in `use-builder-state.ts`. Actions: `addQuestion`, `updateQuestion`, `removeQuestion`, `moveQuestion`, `duplicateQuestion`, `updateSettings`, `markSaved(serverForm)`. New questions get a `clientId` (uuid) until saved. `dirty` = deep-compare against the last server snapshot.
 
-### 6.3 `saveFormAction` (the only write path for builder content)
-Input:
+ Input:
 ```ts
 {
   formId: string,

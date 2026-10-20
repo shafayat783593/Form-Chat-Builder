@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
+import { hasOptions } from "@/lib/field-types";
 import type { AddQuestionInput, UpdateQuestionInput } from "./question.schema";
 
 export const MAX_QUESTIONS = 50;
@@ -36,8 +37,13 @@ export async function addQuestion(formId: string, ownerId: string, input: AddQue
         type: input.type,
         label: input.label,
         required: input.required,
-        options: input.type === "CHOICE" ? input.options : undefined,
+        options: hasOptions(input.type) && "options" in input ? input.options : undefined,
         order: (agg._max.order ?? -1) + 1,
+        placeholder: input.placeholder ?? null,
+        textColor: input.textColor ?? null,
+        fontSize: input.fontSize ?? null,
+        fontWeight: input.fontWeight ?? null,
+        fontStyle: input.fontStyle ?? null,
       },
       select: { id: true },
     });
@@ -46,12 +52,21 @@ export async function addQuestion(formId: string, ownerId: string, input: AddQue
 
 export async function updateQuestion(id: string, ownerId: string, input: UpdateQuestionInput) {
   const q = await getOwnedQuestion(id, ownerId);
-  if (input.options !== undefined && q.type !== "CHOICE")
+  if (input.options !== undefined && !hasOptions(q.type))
     throw new AppError(422, "Only choice questions have options");
 
   await prisma.question.update({
     where: { id },
-    data: { label: input.label, required: input.required, options: input.options },
+    data: {
+      label: input.label,
+      required: input.required,
+      options: input.options,
+      placeholder: input.placeholder,
+      textColor: input.textColor,
+      fontSize: input.fontSize,
+      fontWeight: input.fontWeight,
+      fontStyle: input.fontStyle,
+    },
   });
   return { formId: q.formId };
 }

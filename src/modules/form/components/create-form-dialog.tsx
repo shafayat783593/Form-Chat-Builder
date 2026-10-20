@@ -61,13 +61,12 @@ export function CreateFormDialog({ templates }: CreateFormDialogProps) {
   }
 
   return (
-    <>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
         <Plus className="size-3.5" />
         Create new form
       </DialogTrigger>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+      <DialogContent>
           <DialogHeader>
             <DialogTitle>Create new form</DialogTitle>
             <DialogDescription>
@@ -147,7 +146,6 @@ export function CreateFormDialog({ templates }: CreateFormDialogProps) {
 
           {error ? <p role="alert" className="mt-3 text-sm text-destructive">{error}</p> : null}
         </DialogContent>
-      </Dialog>
-    </>
+    </Dialog>
   );
 }

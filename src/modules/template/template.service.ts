@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { AppError } from "@/lib/errors";
+import { generateFormSlug } from "@/lib/slug";
 
 /**
  * Admin template listing (read model).
@@ -40,3 +42,143 @@ export async function listPublishedTemplates() {
     },
   });
 }
+
+/**
+ * Create a form template (ADMIN only).
+ *
+ * Creates a Form with isTemplate = true, status = DRAFT, owned by the admin.
+ * The `templateSlug` must be unique (409 on conflict).
+ */
+export async function createTemplate(
+  ownerId: string,
+  input: { title: string; templateSlug: string; templateCategory?: string | null },
+) {
+  const existing = await prisma.form.findFirst({
+    where: { templateSlug: input.templateSlug },
+    select: { id: true },
+  });
+  if (existing) throw new AppError(409, "A template with this slug already exists");
+
+  const slug = await generateFormSlug();
+
+  return prisma.form.create({
+    data: {
+      ownerId,
+      title: input.title,
+      slug,
+      isTemplate: true,
+      status: "DRAFT",
+      templateSlug: input.templateSlug,
+      templateCategory: input.templateCategory ?? null,
+    },
+    select: { id: true, slug: true, templateSlug: true },
+  });
+}
+
+/**
+ * Set the publish status of a template (ADMIN only).
+ *
+ * PUBLISHED means "visible in the gallery and usable by owners" but the
+ * template is still NOT reachable through /f, /embed or the public API.
+ * Requires at least one question.
+ */
+export async function setTemplateStatus(
+  ownerId: string,
+  templateId: string,
+  status: "DRAFT" | "PUBLISHED",
+) {
+  const template = await prisma.form.findFirst({
+    where: { id: templateId, ownerId, isTemplate: true },
+    select: { _count: { select: { questions: true } } },
+  });
+  if (!template) throw new AppError(404, "Template not found");
+  if (status === "PUBLISHED" && template._count.questions === 0) {
+    throw new AppError(422, "Add at least one question before publishing");
+  }
+
+  await prisma.form.update({
+    where: { id: templateId },
+    data: { status },
+  });
+}
+
+/**
+ * Delete a template (ADMIN only).
+ *
+ * Forms already copied from it keep working: their sourceTemplateId is set
+ * to null before the template is removed.
+ */
+export async function deleteTemplate(ownerId: string, templateId: string) {
+  const template = await prisma.form.findFirst({
+    where: { id: templateId, ownerId, isTemplate: true },
+    select: { id: true },
+  });
+  if (!template) throw new AppError(404, "Template not found");
+
+  await prisma.form.updateMany({
+    where: { sourceTemplateId: templateId },
+    data: { sourceTemplateId: null },
+  });
+
+  await prisma.form.delete({ where: { id: templateId } });
+}
+
+/**
+ * Fetch a single template owned by the admin, with its questions (for editing).
+ */
+export async function getTemplateForAdmin(ownerId: string, templateId: string) {
+  const template = await prisma.form.findFirst({
+    where: { id: templateId, ownerId, isTemplate: true },
+    include: { questions: { orderBy: { order: "asc" } } },
+  });
+  if (!template) throw new AppError(404, "Template not found");
+  return template;
+}
+
+/**
+ * Public read of a published template (read-only preview).
+ * Returns null when the slug is unknown, unpublished, or not a template.
+ */
+export async function getPublishedTemplateBySlug(templateSlug: string) {
+  const template = await prisma.form.findFirst({
+    where: { templateSlug, isTemplate: true, status: "PUBLISHED" },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      templateSlug: true,
+      templateCategory: true,
+      themeColor: true,
+      questions: {
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          type: true,
+          label: true,
+          options: true,
+          required: true,
+        },
+      },
+    },
+  });
+
+  if (!template) return null;
+
+  return {
+    id: template.id,
+    title: template.title,
+    description: template.description,
+    templateSlug: template.templateSlug,
+    templateCategory: template.templateCategory,
+    themeColor: template.themeColor,
+    questions: template.questions.map((q) => ({
+      id: q.id,
+      type: q.type,
+      label: q.label,
+      options: Array.isArray(q.options) ? (q.options as string[]) : null,
+      required: q.required,
+    })),
+  };
+}
+
+

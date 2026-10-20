@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/session";
-import { createFormSchema, updateFormSchema } from "./form.schema";
+import { createFormSchema, updateFormSchema, saveFormSchema } from "./form.schema";
 import * as formService from "./form.service";
 import { run } from "@/lib/action";
 
@@ -15,7 +15,7 @@ export async function createFormAction(input: unknown) {
   });
 }
 
-export async function updateFormAction(id: string, input: unknown) {
+export async function updateFormAction(id: string, input: unknown){
   return run(async () => {
     const user = await requireUser();
     await formService.updateForm(id, user.id, updateFormSchema.parse(input));
@@ -36,5 +36,17 @@ export async function setFormStatusAction(id: string, status: "DRAFT" | "PUBLISH
     const user = await requireUser();
     await formService.setFormStatus(id, user.id, status);
     revalidatePath("/dashboard");
+  });
+}
+
+export async function saveFormAction(input: unknown, isTemplate = false) {
+  return run(async () => {
+    const user = await requireUser();
+    const parsed = saveFormSchema.parse(input);
+    const result = await formService.saveForm(parsed, user.id, isTemplate);
+    revalidatePath("/dashboard");
+    revalidatePath(`/dashboard/forms/${result.form.id}/edit`);
+    revalidatePath("/admin/templates");
+    return result;
   });
 }

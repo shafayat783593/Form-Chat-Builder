@@ -1,10 +1,9 @@
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { validateAnswer, type QuestionType } from "@/lib/field-types";
 import type { SubmitResponseInput } from "./response.schema";
 
 const PAGE_SIZE = 20;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Public submission. Re-validates every answer on the server:
@@ -16,7 +15,13 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
     select: {
       id: true,
       questions: {
-        select: { id: true, type: true, label: true, options: true, required: true },
+        select: {
+          id: true,
+          type: true,
+          label: true,
+          options: true,
+          required: true,
+        },
       },
     },
   });
@@ -51,27 +56,16 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
     }
   }
 
-  // Per-type validation.
+  // Per-type validation (shared with the client).
   for (const answer of input.answers) {
     const question = questions.get(answer.questionId);
     if (!question) continue;
     const value = answer.value.trim();
     if (value === "") continue;
 
-    if (question.type === "EMAIL" && !EMAIL_RE.test(value)) {
-      details[question.id] = "Enter a valid email address";
-    }
-
-    if (question.type === "CHOICE") {
-      const options = Array.isArray(question.options) ? (question.options as string[]) : [];
-      if (!options.includes(value)) {
-        details[question.id] = "Choose one of the available options";
-      }
-    }
-
-    if (question.type === "YES_NO" && value !== "yes" && value !== "no") {
-      details[question.id] = "Answer must be yes or no";
-    }
+    const options = Array.isArray(question.options) ? (question.options as string[]) : null;
+    const message = validateAnswer(question.type as QuestionType, value, options);
+    if (message) details[question.id] = message;
   }
 
   if (Object.keys(details).length > 0) {
