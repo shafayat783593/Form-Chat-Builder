@@ -17,16 +17,24 @@ interface SettingsPanelProps {
   settings: BuilderSettings;
   questions: Array<{ clientId: string; id?: string; label: string; prefillKey?: string | null }>;
   slug: string;
+  status: "DRAFT" | "PUBLISHED";
+  publishing?: boolean;
   onUpdate: (patch: Partial<BuilderSettings>) => void;
   onUpdateQuestion: (clientId: string, patch: { prefillKey?: string | null }) => void;
+  onShare?: () => void;
+  onUnpublish?: () => void;
 }
 
 export function SettingsPanel({
   settings,
   questions,
   slug,
+  status,
+  publishing,
   onUpdate,
   onUpdateQuestion,
+  onShare,
+  onUnpublish,
 }: SettingsPanelProps) {
   const [tab, setTab] = React.useState<"general" | "style" | "notifications" | "prefill">("general");
 
@@ -46,7 +54,14 @@ export function SettingsPanel({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <TabsContent value="general" className="pt-4">
-            <GeneralTab settings={settings} onUpdate={onUpdate} />
+            <GeneralTab
+              settings={settings}
+              status={status}
+              onUpdate={onUpdate}
+              onShare={onShare}
+              onUnpublish={onUnpublish}
+              publishing={publishing}
+            />
           </TabsContent>
           <TabsContent value="style" className="pt-4">
             <StyleTab settings={settings} onUpdate={onUpdate} />

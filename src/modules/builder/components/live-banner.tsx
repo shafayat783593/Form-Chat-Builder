@@ -1,0 +1,90 @@
+"use client";
+
+import { useState } from "react";
+import { Check, Copy, Eye, Share2, Inbox } from "lucide-react";
+
+interface LiveBannerProps {
+  formUrl: string;
+  responseCount: number;
+  onShare: () => void;
+  /** Where the "Responses" button goes. */
+  responsesHref?: string;
+}
+
+export function LiveBanner({ formUrl, responseCount, onShare, responsesHref }: LiveBannerProps) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(formUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard may be blocked; the link is selectable in the field.
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 bg-foreground px-4 py-4 text-background sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <span className="size-2 shrink-0 rounded-full bg-success" />
+            Your form is live — {responseCount > 0 ? `${responseCount} response${responseCount === 1 ? "" : "s"} so far` : "waiting for its first response"}
+          </p>
+          <p className="mt-1 text-xs text-background/75">
+            Send the link to the people you want answers from.{" "}
+            <em>Start with a few people who are ready to respond.</em>
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <a
+            href={formUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-background px-3 text-sm font-medium text-foreground transition-opacity hover:opacity-90"
+          >
+            <Eye className="size-4" />
+            Open &amp; test it
+          </a>
+          <button
+            type="button"
+            onClick={onShare}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-background/30 px-3 text-sm font-medium transition-colors hover:bg-background/10"
+          >
+            <Share2 className="size-4" />
+            Share
+          </button>
+          {responsesHref ? (
+            <a
+              href={responsesHref}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-background/10"
+            >
+              <Inbox className="size-4" />
+              Responses
+            </a>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex max-w-xl gap-2">
+        <input
+          readOnly
+          value={formUrl}
+          onFocus={(e) => e.currentTarget.select()}
+          aria-label="Public form link"
+          className="h-8 min-w-0 flex-1 rounded-lg border border-background/20 bg-background/10 px-2.5 font-mono text-xs text-background"
+        />
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-background px-3 text-xs font-medium text-foreground transition-opacity hover:opacity-90"
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}

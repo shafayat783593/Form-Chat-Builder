@@ -10,9 +10,9 @@ import {
   Rocket,
   Check,
   X,
-  Circle,
   Square,
   MousePointerClick,
+  Share2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ interface TopBarProps {
   onUnpublish: () => void;
   onPreview: () => void;
   onSettings: () => void;
+  onShare: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -49,6 +50,7 @@ export function TopBar({
   onUnpublish,
   onPreview,
   onSettings,
+  onShare,
   onUndo,
   onRedo,
   canUndo = false,
@@ -85,11 +87,16 @@ export function TopBar({
           className="hidden shrink-0 gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline-flex"
         >
           {isPublished ? (
-            <Circle className="size-2 fill-current" />
+            <>
+              <span className="size-2 rounded-full bg-success" />
+              Live
+            </>
           ) : (
-            <Square className="size-2 fill-current" />
+            <>
+              <Square className="size-2 fill-current" />
+              Draft
+            </>
           )}
-          {isPublished ? "Published" : "Draft"}
         </Badge>
       </div>
 
@@ -155,6 +162,19 @@ export function TopBar({
               <span>Save</span>
             </>
           )}
+        </button>
+
+        {/* Share */}
+        <button
+          type="button"
+          onClick={onShare}
+          disabled={!isPublished}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground px-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+          aria-label="Share form"
+        >
+          <Share2 className="size-4" />
+          <span className="hidden sm:inline">Share</span>
+          {isPublished ? <span className="size-1.5 rounded-full bg-success" /> : null}
         </button>
 
         <button

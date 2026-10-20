@@ -10,3 +10,7 @@ export const GET = withErrorHandler<Ctx>(async (_req, { params }) => {
   if (!form) throw new AppError(404, "Form not found");
   return Response.json(form);
 });
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204 });
+}

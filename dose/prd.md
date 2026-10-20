@@ -131,8 +131,9 @@ datasource db {
 
 enum Role           { ADMIN OWNER }
 enum FormStatus     { DRAFT PUBLISHED }
-enum QuestionType   { TEXT EMAIL CHOICE YES_NO }
+enum QuestionType   { TEXT TEXTAREA EMAIL NUMBER PHONE DATE CHOICE RADIO CHECKBOX YES_NO RATING RANGE NPS ADDRESS FULL_NAME }
 enum WidgetPosition { RIGHT LEFT }
+enum DisplayMode    { CLASSIC FOCUS }
 
 model User {
   id            String   @id
@@ -160,6 +161,10 @@ model Form {
   themeColor       String         @default("#4f46e5") // validated #rrggbb
   launcherLabel    String         @default("Chat with us")   // NEW (Style tab)
   widgetPosition   WidgetPosition @default(RIGHT)           // NEW (Style tab)
+  submitButtonText String         @default("Submit")        // NEW (General tab)
+  displayMode      DisplayMode    @default(CLASSIC)        // NEW: CLASSIC = one page, FOCUS = one question at a time
+  showProgress     Boolean        @default(true)           // NEW (General tab)
+  multiPageForm    Boolean        @default(false)          // NEW (General tab)
   status           FormStatus     @default(DRAFT)
   publishedAt      DateTime?                                // NEW
   notifyOnResponse Boolean        @default(false)           // NEW (Notifications tab, Phase 3)
@@ -190,10 +195,16 @@ model Question {
   form       Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
   type       QuestionType                          // immutable after creation
   label      String
-  options    Json?                                 // string[] for CHOICE (2–10 unique), null otherwise
+  options    Json?                                 // string[] for CHOICE / RADIO / CHECKBOX (2–10 unique), null otherwise
   required   Boolean      @default(true)
   order      Int
   prefillKey String?                               // NEW (Prefill tab, Phase 3): URL param name, e.g. "email"
+  // Per-field appearance (editable per field in the builder)
+  placeholder String? // input placeholder
+  textColor   String? // #rrggbb - label / field text colour
+  fontSize    Int? // px (10–32)
+  fontWeight  String? // normal | medium | semibold | bold (default semibold)
+  fontStyle   String? // normal | italic
   answers    Answer[]
 
   @@index([formId, order])
@@ -216,7 +227,7 @@ model Answer {
   response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  value      String                                  // YES_NO: "yes"|"no"; CHOICE: must be in options
+  value      String                                  // YES_NO: "yes"|"no"; CHOICE/RADIO: in options; CHECKBOX: comma separated
 
   @@unique([responseId, questionId])
 }
@@ -374,14 +385,19 @@ Service behavior, all in **one transaction**:
 ```json
 { "slug":"…","title":"…","description":null,"welcomeText":"…","completionText":"…",
   "themeColor":"#4f46e5","launcherLabel":"Chat with us","widgetPosition":"RIGHT",
-  "questions":[{"id":"…","type":"TEXT|EMAIL|CHOICE|YES_NO","label":"…","options":null,"required":true,"prefillKey":null}] }
+  "submitButtonText":"Submit","displayMode":"CLASSIC","showProgress":true,"multiPageForm":false,
+  "questions":[{"id":"…","type":"TEXT|EMAIL|CHOICE|RADIO|CHECKBOX|YES_NO|TEXTAREA|NUMBER|PHONE|DATE|RATING|RANGE|NPS|ADDRESS|FULL_NAME",
+                "label":"…","options":null,"required":true,"prefillKey":null,
+                "placeholder":null,"textColor":null,"fontSize":null,"fontWeight":null,"fontStyle":null}] }
 ```
 `404` if missing, unpublished, **or a template**. Query: `where: { slug, status: "PUBLISHED", isTemplate: false }`.
+`OPTIONS` → `204`.
 
 `POST /api/public/forms/{slug}/responses` body `{ "answers":[{"questionId":"…","value":"…"}], "sourceUrl"?: "https://…" }`
-- `201 { ok:true, id }` · `400` unknown/duplicate question id, bad body, body too large · `404` not found/unpublished/template · `422 { error, details:{[questionId]:message} }` · `429` rate limited · `OPTIONS` → `204`.
-- Validation: every `required` question answered; EMAIL matches a sane regex and ≤ 254 chars; CHOICE value ∈ options; YES_NO ∈ {"yes","no"}; TEXT trimmed, ≤ 2000; ≤ 100 answers; body ≤ 32 KB. `sourceUrl`: store only `new URL(x).origin`, ignore if invalid.
+- `201 { ok:true, id }` · `400` unknown/duplicate question id, bad body, body too large (> 32 KB) · `404` not found/unpublished/template · `422 { error, details:{[questionId]:message} }` · `429` rate limited (5/min/IP/form, `Retry-After` header) · `OPTIONS` → `204`.
+- Validation: every `required` question answered; EMAIL matches a sane regex and ≤ 254 chars; CHOICE/RADIO value ∈ options; CHECKBOX values ∈ options (comma separated); YES_NO ∈ {"yes","no"}; NUMBER/PHONE/DATE/RATING/RANGE/NPS format-checked; TEXT trimmed, ≤ 2000; ≤ 100 answers; body ≤ 32 KB. `sourceUrl`: store only `new URL(x).origin`, ignore if invalid.
 - Create `Response` + `Answer`s in one transaction.
+- Rate limiting is **per instance** (in-memory, `src/lib/rate-limit.ts`); the production fix is a shared store (Upstash).
 
 ### 7.2 Auth (Better Auth — do not reimplement)
 `POST /api/auth/sign-up/email`, `sign-in/email`, `sign-out`, `GET get-session`. POSTs with cookies need an `Origin` header (curl/Postman must add it). No wildcard CORS on `/api/auth/*`.
@@ -397,7 +413,7 @@ async headers() {
       { key: "Access-Control-Allow-Headers", value: "Content-Type" },
     ]},
   ];
-}
+}  
 ```
 `frame-ancestors *` lets any site embed any published form. Acceptable for the MVP; **document it as a known limitation** (production fix: per-form allowed-domains list, enforced with a header set from the DB).
 

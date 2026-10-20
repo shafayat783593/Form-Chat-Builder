@@ -94,6 +94,12 @@ export async function getPublishedFormBySlug(slug: string) {
       welcomeText: true,
       completionText: true,
       themeColor: true,
+      launcherLabel: true,
+      widgetPosition: true,
+      submitButtonText: true,
+      displayMode: true,
+      showProgress: true,
+      multiPageForm: true,
       questions: {
         orderBy: { order: "asc" },
         select: {
@@ -102,6 +108,7 @@ export async function getPublishedFormBySlug(slug: string) {
           label: true,
           options: true,
           required: true,
+          prefillKey: true,
           placeholder: true,
           textColor: true,
           fontSize: true,
@@ -121,12 +128,19 @@ export async function getPublishedFormBySlug(slug: string) {
     welcomeText: form.welcomeText,
     completionText: form.completionText,
     themeColor: form.themeColor,
+    launcherLabel: form.launcherLabel,
+    widgetPosition: form.widgetPosition,
+    submitButtonText: form.submitButtonText,
+    displayMode: form.displayMode,
+    showProgress: form.showProgress,
+    multiPageForm: form.multiPageForm,
     questions: form.questions.map((q) => ({
       id: q.id,
       type: q.type,
       label: q.label,
       options: Array.isArray(q.options) ? (q.options as string[]) : null,
       required: q.required,
+      prefillKey: q.prefillKey,
       placeholder: q.placeholder,
       textColor: q.textColor,
       fontSize: q.fontSize,
@@ -143,6 +157,11 @@ export async function getFormForOwner(id: string, ownerId: string) {
   });
   if (!form) throw new AppError(404, "Form not found");
   return form;
+}
+
+/** Number of responses a form has received (owner scoped). */
+export async function countResponsesForOwner(id: string, ownerId: string) {
+  return prisma.response.count({ where: { form: { id, ownerId } } });
 }
 
 export async function updateForm(id: string, ownerId: string, input: UpdateFormInput) {
@@ -175,6 +194,10 @@ export interface SaveFormSettings {
   themeColor: string;
   launcherLabel: string;
   widgetPosition: "RIGHT" | "LEFT";
+  submitButtonText: string;
+  displayMode: "CLASSIC" | "FOCUS";
+  showProgress: boolean;
+  multiPageForm: boolean;
   notifyOnResponse: boolean;
   notifyEmails: string[];
 }
@@ -345,6 +368,10 @@ export async function saveForm(input: SaveFormInput, userId: string, isTemplate:
         themeColor: input.settings.themeColor,
         launcherLabel: input.settings.launcherLabel,
         widgetPosition: input.settings.widgetPosition,
+        submitButtonText: input.settings.submitButtonText,
+        displayMode: input.settings.displayMode,
+        showProgress: input.settings.showProgress,
+        multiPageForm: input.settings.multiPageForm,
         notifyOnResponse: input.settings.notifyOnResponse,
         notifyEmails: input.settings.notifyEmails,
       },

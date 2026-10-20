@@ -1,5 +1,5 @@
 import { requireUserPage } from "@/lib/session";
-import { getFormForOwner } from "@/modules/form/form.service";
+import { countResponsesForOwner, getFormForOwner } from "@/modules/form/form.service";
 import { Builder, type ServerForm } from "@/modules/builder";
 
 export default async function EditPage({
@@ -9,7 +9,10 @@ export default async function EditPage({
 }) {
   const { id } = await params;
   const user = await requireUserPage();
-  const form = await getFormForOwner(id, user.id);
+  const [form, responseCount] = await Promise.all([
+    getFormForOwner(id, user.id),
+    countResponsesForOwner(id, user.id),
+  ]);
 
   const initialForm: ServerForm = {
     id: form.id,
@@ -21,6 +24,10 @@ export default async function EditPage({
     themeColor: form.themeColor,
     launcherLabel: form.launcherLabel,
     widgetPosition: form.widgetPosition,
+    submitButtonText: form.submitButtonText,
+    displayMode: form.displayMode,
+    showProgress: form.showProgress,
+    multiPageForm: form.multiPageForm,
     status: form.status,
     updatedAt: form.updatedAt.toISOString(),
     notifyOnResponse: form.notifyOnResponse,
@@ -36,5 +43,5 @@ export default async function EditPage({
     })),
   };
 
-  return <Builder initialForm={initialForm} />;
+  return <Builder initialForm={initialForm} responseCount={responseCount} />;
 }

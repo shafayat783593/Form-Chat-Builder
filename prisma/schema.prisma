@@ -43,6 +43,11 @@ enum WidgetPosition {
   LEFT
 }
 
+enum DisplayMode {
+  CLASSIC
+  FOCUS
+}
+
 model User {
   id            String    @id
   name          String
@@ -117,6 +122,10 @@ model Form {
   themeColor       String         @default("#4f46e5")
   launcherLabel    String         @default("Chat with us")
   widgetPosition   WidgetPosition @default(RIGHT)
+  submitButtonText String         @default("Submit")
+  displayMode      DisplayMode    @default(CLASSIC)
+  showProgress     Boolean        @default(true)
+  multiPageForm    Boolean        @default(false)
   status           FormStatus     @default(DRAFT)
   publishedAt      DateTime?
   notifyOnResponse Boolean        @default(false)

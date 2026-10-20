@@ -37,7 +37,6 @@
   // ---------------------------------------------------------------------------
   fetch(appOrigin + "/api/public/forms/" + encodeURIComponent(slug), {
     method: "GET",
-    headers: { "Content-Type": "application/json" },
   })
     .then(function (res) {
       return res.ok ? res.json() : null;

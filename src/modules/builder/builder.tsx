@@ -19,15 +19,23 @@ import { FieldPalette } from "./components/field-palette";
 import { QuestionCanvas } from "./components/question-canvas";
 import { SettingsPanel } from "./components/settings-panel";
 import { ShareDialog } from "./components/share-dialog";
+import { LiveBanner } from "./components/live-banner";
 
 interface BuilderProps {
   initialForm: ServerForm;
   isTemplate?: boolean;
   /** Where the "back" button navigates to. Defaults to /dashboard. */
   backHref?: string;
+  /** Number of responses received so far (shown in the "form is live" banner). */
+  responseCount?: number;
 }
 
-export function Builder({ initialForm, isTemplate = false, backHref = "/dashboard" }: BuilderProps) {
+export function Builder({
+  initialForm,
+  isTemplate = false,
+  backHref = "/dashboard",
+  responseCount = 0,
+}: BuilderProps) {
   const router = useRouter();
   const {
     state,
@@ -93,7 +101,21 @@ export function Builder({ initialForm, isTemplate = false, backHref = "/dashboar
         {
           formId: initialForm.id,
           expectedUpdatedAt: expectedUpdatedAtRef.current,
-          settings,
+          settings: {
+            title: settings.title,
+            description: settings.description,
+            welcomeText: settings.welcomeText,
+            completionText: settings.completionText,
+            themeColor: settings.themeColor,
+            launcherLabel: settings.launcherLabel,
+            widgetPosition: settings.widgetPosition,
+            submitButtonText: settings.submitButtonText,
+            displayMode: settings.displayMode,
+            showProgress: settings.showProgress,
+            multiPageForm: settings.multiPageForm,
+            notifyOnResponse: settings.notifyOnResponse,
+            notifyEmails: settings.notifyEmails,
+          },
           questions: payloadQuestions(),
         },
         isTemplate,
@@ -120,7 +142,21 @@ export function Builder({ initialForm, isTemplate = false, backHref = "/dashboar
             {
               formId: initialForm.id,
               expectedUpdatedAt: expectedUpdatedAtRef.current,
-              settings,
+              settings: {
+                title: settings.title,
+                description: settings.description,
+                welcomeText: settings.welcomeText,
+                completionText: settings.completionText,
+                themeColor: settings.themeColor,
+                launcherLabel: settings.launcherLabel,
+                widgetPosition: settings.widgetPosition,
+                submitButtonText: settings.submitButtonText,
+                displayMode: settings.displayMode,
+                showProgress: settings.showProgress,
+                multiPageForm: settings.multiPageForm,
+                notifyOnResponse: settings.notifyOnResponse,
+                notifyEmails: settings.notifyEmails,
+              },
               questions: payloadQuestions(),
             },
             isTemplate,
@@ -164,11 +200,21 @@ export function Builder({ initialForm, isTemplate = false, backHref = "/dashboar
         onUnpublish={() => handlePublish(false)}
         onPreview={() => router.push(previewHref)}
         onSettings={() => {}}
+        onShare={() => setShareOpen(true)}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
       />
+
+      {status === "PUBLISHED" ? (
+        <LiveBanner
+          formUrl={formUrl}
+          responseCount={responseCount}
+          onShare={() => setShareOpen(true)}
+          responsesHref={isTemplate ? undefined : `/dashboard/forms/${initialForm.id}/responses`}
+        />
+      ) : null}
 
       <div className="flex flex-1 min-w-0 overflow-hidden">
         <aside className="hidden w-72 shrink-0 border-r border-border bg-background lg:block">
@@ -202,12 +248,16 @@ export function Builder({ initialForm, isTemplate = false, backHref = "/dashboar
             settings={settings}
             questions={questions}
             slug={initialForm.slug}
+            status={status}
+            publishing={publishing}
             onUpdate={(patch: Partial<BuilderSettings>) =>
               dispatch({ type: "UPDATE_SETTINGS", patch })
             }
             onUpdateQuestion={(clientId: string, patch: { prefillKey?: string | null }) =>
               dispatch({ type: "UPDATE_QUESTION", clientId, patch })
             }
+            onShare={() => setShareOpen(true)}
+            onUnpublish={() => handlePublish(false)}
           />
         </aside>
       </div>

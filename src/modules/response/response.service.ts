@@ -76,13 +76,30 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
     .map((a) => ({ questionId: a.questionId, value: a.value.trim() }))
     .filter((a) => a.value !== "");
 
+  // Only the origin is stored - never the full URL, path or query string.
+  const sourceUrl = toOrigin(input.sourceUrl);
+
   return prisma.response.create({
     data: {
       formId: form.id,
+      sourceUrl,
       answers: { create: answers },
     },
     select: { id: true },
   });
+}
+
+/**
+ * Reduces a URL to its origin (`https://example.com`). Returns null for
+ * anything that is not a valid absolute URL.
+ */
+function toOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }
 
 export async function listResponsesForOwner(formId: string, ownerId: string, page = 1) {

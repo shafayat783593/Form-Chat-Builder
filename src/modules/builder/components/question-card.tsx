@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
+  DEFAULT_FONT_SIZE,
+  DEFAULT_FONT_WEIGHT,
   FONT_STYLES,
   FONT_WEIGHTS,
   MAX_FONT_SIZE,
@@ -56,20 +58,20 @@ export function QuestionCard({
   const isText = meta.kind === "text";
   const isYesNo = question.type === "YES_NO";
 
-  const fontSize = question.fontSize ?? 14;
+  const fontSize = question.fontSize ?? DEFAULT_FONT_SIZE;
   const textColor = question.textColor ?? undefined;
 
   const labelStyle: React.CSSProperties = {
-    fontSize: question.fontSize ? `${question.fontSize}px` : undefined,
-    fontWeight: (question.fontWeight ?? undefined) as React.CSSProperties["fontWeight"],
-    fontStyle: (question.fontStyle ?? undefined) as React.CSSProperties["fontStyle"],
+    fontSize: `${fontSize}px`,
+    fontWeight: (question.fontWeight ?? DEFAULT_FONT_WEIGHT) as React.CSSProperties["fontWeight"],
+    fontStyle: (question.fontStyle ?? "normal") as React.CSSProperties["fontStyle"],
     color: textColor,
   };
 
   const previewStyle: React.CSSProperties = {
-    fontSize: question.fontSize ? `${question.fontSize}px` : undefined,
-    fontWeight: (question.fontWeight ?? undefined) as React.CSSProperties["fontWeight"],
-    fontStyle: (question.fontStyle ?? undefined) as React.CSSProperties["fontStyle"],
+    fontSize: `${fontSize}px`,
+    fontWeight: (question.fontWeight ?? DEFAULT_FONT_WEIGHT) as React.CSSProperties["fontWeight"],
+    fontStyle: (question.fontStyle ?? "normal") as React.CSSProperties["fontStyle"],
     color: textColor,
   };
 

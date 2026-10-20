@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DEFAULT_FONT_SIZE,
+  DEFAULT_FONT_WEIGHT,
   hasOptions,
   isMultiSelect,
   NPS_MAX,
@@ -34,9 +36,14 @@ type Question = {
 type FormData = {
   slug: string;
   title: string;
+  description?: string | null;
   welcomeText: string;
   completionText: string;
   themeColor: string;
+  submitButtonText: string;
+  displayMode: "CLASSIC" | "FOCUS";
+  showProgress: boolean;
+  multiPageForm: boolean;
   questions: Question[];
 };
 
@@ -262,9 +269,9 @@ export function Chat({ form, previewMode = false }: ChatProps) {
   }
 
   const questionStyle: React.CSSProperties = {
-    fontSize: question?.fontSize ? `${question.fontSize}px` : undefined,
-    fontWeight: (question?.fontWeight ?? undefined) as React.CSSProperties["fontWeight"],
-    fontStyle: (question?.fontStyle ?? undefined) as React.CSSProperties["fontStyle"],
+    fontSize: `${question?.fontSize ?? DEFAULT_FONT_SIZE}px`,
+    fontWeight: (question?.fontWeight ?? DEFAULT_FONT_WEIGHT) as React.CSSProperties["fontWeight"],
+    fontStyle: (question?.fontStyle ?? "normal") as React.CSSProperties["fontStyle"],
     color: question?.textColor ?? undefined,
   };
 
@@ -289,7 +296,7 @@ export function Chat({ form, previewMode = false }: ChatProps) {
           {question && (
             <div className="flex justify-start">
               <div className="rounded-2xl border border-border bg-card p-3 max-w-[85%] text-sm shadow-sm">
-                <span className="font-medium" style={questionStyle}>
+                <span className="font-semibold" style={questionStyle}>
                   {question.label}
                 </span>
                 {question.required && (

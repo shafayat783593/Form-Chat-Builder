@@ -63,6 +63,48 @@ export const MIN_FONT_SIZE = 10;
 export const MAX_FONT_SIZE = 32;
 export const MAX_PLACEHOLDER = 120;
 
+/** Defaults applied when a field has no explicit style stored. */
+export const DEFAULT_FONT_SIZE = 14;
+export const DEFAULT_FONT_WEIGHT = "semibold";
+
+export interface FieldStyle {
+  placeholder?: string | null;
+  textColor?: string | null;
+  fontSize?: number | null;
+  fontWeight?: string | null;
+  fontStyle?: string | null;
+}
+
+/**
+ * Resolves the effective style of a field. Font size and weight always have a
+ * value so a field never renders unstyled (thin, tiny) text.
+ */
+export function resolveFieldStyle(style: FieldStyle | null | undefined) {
+  return {
+    fontSize: style?.fontSize ?? DEFAULT_FONT_SIZE,
+    fontWeight: (style?.fontWeight ?? DEFAULT_FONT_WEIGHT) as
+      | "normal"
+      | "medium"
+      | "semibold"
+      | "bold",
+    fontStyle: (style?.fontStyle ?? "normal") as "normal" | "italic",
+    color: style?.textColor ?? undefined,
+    placeholder: style?.placeholder ?? undefined,
+  };
+}
+
+/** Builds the inline style object for a field's label / input text. */
+export function fieldStyleCss(style: FieldStyle | null | undefined): React.CSSProperties {
+  const s = resolveFieldStyle(style);
+  return {
+    fontSize: `${s.fontSize}px`,
+    fontWeight: s.fontWeight,
+    fontStyle: s.fontStyle,
+    color: s.color,
+  };
+}
+
+
 export function isFontWeight(value: unknown): boolean {
   return typeof value === "string" && (FONT_WEIGHTS as readonly string[]).includes(value);
 }

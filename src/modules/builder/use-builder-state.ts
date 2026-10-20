@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { hasOptions, type QuestionType } from "@/lib/field-types";
+import { hasOptions, DEFAULT_FONT_SIZE, DEFAULT_FONT_WEIGHT, type QuestionType } from "@/lib/field-types";
 
 export type { QuestionType };
 
@@ -44,6 +44,10 @@ export interface BuilderSettings {
   themeColor: string;
   launcherLabel: string;
   widgetPosition: "RIGHT" | "LEFT";
+  submitButtonText: string;
+  displayMode: "CLASSIC" | "FOCUS";
+  showProgress: boolean;
+  multiPageForm: boolean;
   notifyOnResponse: boolean;
   notifyEmails: string[];
 }
@@ -60,6 +64,10 @@ export interface ServerForm {
   widgetPosition: "RIGHT" | "LEFT";
   status: "DRAFT" | "PUBLISHED";
   updatedAt: string;
+  submitButtonText: string;
+  displayMode: "CLASSIC" | "FOCUS";
+  showProgress: boolean;
+  multiPageForm: boolean;
   notifyOnResponse: boolean;
   notifyEmails: string[];
   questions: Array<{
@@ -104,6 +112,10 @@ export const DEFAULT_SETTINGS: BuilderSettings = {
   themeColor: "#4f46e5",
   launcherLabel: "Chat with us",
   widgetPosition: "RIGHT",
+  submitButtonText: "Submit",
+  displayMode: "CLASSIC",
+  showProgress: true,
+  multiPageForm: false,
   notifyOnResponse: false,
   notifyEmails: [],
 };
@@ -156,6 +168,10 @@ function createInitialState(form: ServerForm): BuilderState {
       themeColor: form.themeColor,
       launcherLabel: form.launcherLabel,
       widgetPosition: form.widgetPosition,
+      submitButtonText: form.submitButtonText,
+      displayMode: form.displayMode,
+      showProgress: form.showProgress,
+      multiPageForm: form.multiPageForm,
       notifyOnResponse: form.notifyOnResponse,
       notifyEmails: Array.isArray(form.notifyEmails) ? form.notifyEmails : [],
     },
@@ -179,9 +195,9 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
         order: state.questions.length,
         placeholder: defaultPlaceholder(action.question.type),
         textColor: null,
-        fontSize: null,
-        fontWeight: null,
-        fontStyle: null,
+        fontSize: DEFAULT_FONT_SIZE,
+        fontWeight: DEFAULT_FONT_WEIGHT,
+        fontStyle: "normal",
       }];
       return { ...state, questions: next };
     }
