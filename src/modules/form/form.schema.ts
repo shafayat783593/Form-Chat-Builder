@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const createFormSchema = z.object({
   title: z.string().trim().min(1).max(120),
+  templateId: z.string().min(1).optional(),
 });
 
 export const updateFormSchema = z.object({

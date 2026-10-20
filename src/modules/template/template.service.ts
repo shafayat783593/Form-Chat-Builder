@@ -22,3 +22,21 @@ export async function listTemplatesForAdmin(ownerId: string) {
     },
   });
 }
+
+/**
+ * Published templates visible to owners when creating a form from a template
+ * (PRD section 6.1 step 2).
+ */
+export async function listPublishedTemplates() {
+  return prisma.form.findMany({
+    where: { isTemplate: true, status: "PUBLISHED" },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      templateSlug: true,
+      templateCategory: true,
+      _count: { select: { questions: true } },
+    },
+  });
+}

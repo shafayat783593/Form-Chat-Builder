@@ -3,8 +3,9 @@ import { DashboardPageHeader } from "@/modules/dashboard/ui/dashboard-page-heade
 import { DashboardPanel } from "@/modules/dashboard/ui/dashboard-panel";
 import { StatCards } from "@/modules/dashboard/ui/stat-cards";
 import { FormRow } from "@/modules/form/components/form-row";
-import { NewFormForm } from "@/modules/form/components/new-form-form";
+import { CreateFormDialog } from "@/modules/form/components/create-form-dialog";
 import { getDashboardStats, listForms } from "@/modules/form/form.service";
+import { listPublishedTemplates } from "@/modules/template/template.service";
 import {
   ClipboardList,
   FileText,
@@ -14,9 +15,10 @@ import {
 
 export default async function DashboardPage() {
   const user = await requireUserPage();
-  const [stats, forms] = await Promise.all([
+  const [stats, forms, templates] = await Promise.all([
     getDashboardStats(user.id),
     listForms(user.id),
+    listPublishedTemplates(),
   ]);
 
   const published = forms.filter((f) => f.status === "PUBLISHED").length;
@@ -27,6 +29,9 @@ export default async function DashboardPage() {
       <DashboardPageHeader
         title="Dashboard"
         subtitle={`Welcome back, ${user.name}. Build a form, publish it, and embed the widget on any site.`}
+        action={
+          <CreateFormDialog templates={templates} />
+        }
       />
 
       <StatCards
@@ -63,13 +68,6 @@ export default async function DashboardPage() {
       />
 
       <DashboardPanel
-        title="Create a form"
-        subtitle="Give your form a title. You can add questions right after."
-      >
-        <NewFormForm />
-      </DashboardPanel>
-
-      <DashboardPanel
         id="forms"
         title="Your forms"
         subtitle={
@@ -79,9 +77,9 @@ export default async function DashboardPage() {
         }
       >
         {forms.length === 0 ? (
-          <p className="rounded-md border border-dashed bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-            No forms yet. Create your first one above.
-          </p>
+          <div className="rounded-md border border-dashed bg-muted/40 p-8 text-center text-sm">
+            No forms yet. Use the <b>Create new form</b> button above to start.
+          </div>
         ) : (
           <ul className="space-y-3">
             {forms.map((f) => (

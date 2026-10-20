@@ -1,13 +1,60 @@
-import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
+import { MAX_FORMS_PER_USER } from "@/lib/limits";
+import { generateFormSlug } from "@/lib/slug";
+import type { Prisma } from "@/generated/prisma/client";
 import type { CreateFormInput, UpdateFormInput } from "./form.schema";
 
-const newSlug = () => randomBytes(6).toString("base64url"); // ৮ অক্ষর
-
 export async function createForm(ownerId: string, input: CreateFormInput) {
+  const existingCount = await prisma.form.count({ where: { ownerId } });
+  if (existingCount >= MAX_FORMS_PER_USER) {
+    throw new AppError(400, `You can have at most ${MAX_FORMS_PER_USER} forms. Delete one first.`);
+  }
+
+  const slug = await generateFormSlug();
+
+  if (input.templateId) {
+    const template = await prisma.form.findFirst({
+      where: { id: input.templateId, isTemplate: true, status: "PUBLISHED" },
+      include: { questions: { orderBy: { order: "asc" } } },
+    });
+    if (!template) throw new AppError(404, "Template not found or not published");
+
+    return prisma.$transaction(async (tx) => {
+      const form = await tx.form.create({
+        data: {
+          ownerId,
+          title: input.title,
+          slug,
+          isTemplate: false,
+          status: "DRAFT",
+          sourceTemplateId: template.id,
+          description: template.description,
+          welcomeText: template.welcomeText,
+          completionText: template.completionText,
+          themeColor: template.themeColor,
+          launcherLabel: template.launcherLabel,
+          widgetPosition: template.widgetPosition,
+          notifyEmails: [],
+          questions: {
+            create: (template.questions.map((q, index) => ({
+              type: q.type,
+              label: q.label,
+              options: q.options as unknown as Prisma.InputJsonValue,
+              required: q.required,
+              order: index,
+              prefillKey: q.prefillKey,
+            })) as unknown as Prisma.QuestionCreateWithoutFormInput[]),
+          },
+        },
+        select: { id: true, slug: true },
+      });
+      return form;
+    });
+  }
+
   return prisma.form.create({
-    data: { ownerId, title: input.title, slug: newSlug() },
+    data: { ownerId, title: input.title, slug },
     select: { id: true, slug: true },
   });
 }
