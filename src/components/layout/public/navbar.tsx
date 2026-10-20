@@ -1,21 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, MessageSquare, X } from "lucide-react";
+import { Menu, MessageSquare, X, LayoutDashboard } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { ModeToggle } from "./mode-toggle";
+import { authClient } from "@/lib/auth-client";
 
 const links = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How it works" },
+  { href: "/templates", label: "Templates" },
   { href: "/#demo", label: "Demo" },
 ];
 
+function AuthButtons({ signedIn }: { signedIn: boolean }) {
+  if (signedIn) {
+    return (
+      <Link
+        href="/dashboard"
+        className={buttonVariants({ variant: "ghost" })}
+      >
+        <LayoutDashboard className="size-4" />
+        Dashboard
+      </Link>
+    );
+  }
+  return (
+    <>
+      <Link href="/login" className={buttonVariants({ variant: "ghost" })}>
+        Log in
+      </Link>
+      <Link href="/signup" className={buttonVariants()}>
+        Get started
+      </Link>
+    </>
+  );
+}
+
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const close = () => setOpen(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await authClient.getSession();
+        if (!cancelled) setSignedIn(!!data?.user);
+      } catch {
+        if (!cancelled) setSignedIn(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur">
@@ -39,12 +80,11 @@ export function Navbar() {
         </nav>
         <div className="hidden items-center gap-2 md:flex">
           <ModeToggle />
-          <Link href="/login" className={buttonVariants({ variant: "ghost" })}>
-            Log in
-          </Link>
-          <Link href="/signup" className={buttonVariants()}>
-            Get started
-          </Link>
+          {signedIn === null ? (
+            <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+          ) : (
+            <AuthButtons signedIn={signedIn} />
+          )}
         </div>
 
         {/* mobile */}
@@ -77,20 +117,11 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-2 flex gap-2">
-              <Link
-                href="/login"
-                onClick={close}
-                className={cn(buttonVariants({ variant: "outline" }), "flex-1")}
-              >
-                Log in
-              </Link>
-              <Link
-                href="/signup"
-                onClick={close}
-                className={cn(buttonVariants(), "flex-1")}
-              >
-                Get started
-              </Link>
+              {signedIn === null ? (
+                <div className="h-9 flex-1 animate-pulse rounded-md bg-muted" />
+              ) : (
+                <AuthButtons signedIn={signedIn} />
+              )}
             </div>
           </nav>
         </div>

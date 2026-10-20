@@ -55,8 +55,8 @@ export async function updateQuestion(id: string, ownerId: string, input: UpdateQ
   if (input.options !== undefined && !hasOptions(q.type))
     throw new AppError(422, "Only choice questions have options");
 
-  await prisma.question.update({
-    where: { id },
+  const { count } = await prisma.question.updateMany({
+    where: { id, form: { ownerId } },
     data: {
       label: input.label,
       required: input.required,
@@ -68,6 +68,7 @@ export async function updateQuestion(id: string, ownerId: string, input: UpdateQ
       fontStyle: input.fontStyle,
     },
   });
+  if (count === 0) throw new AppError(404, "Question not found");
   return { formId: q.formId };
 }
 
@@ -82,7 +83,8 @@ export async function deleteQuestion(id: string, ownerId: string) {
   if (form.status === "PUBLISHED" && form._count.questions <= 1)
     throw new AppError(422, "Unpublish the form before deleting its last question");
 
-  await prisma.question.delete({ where: { id } }); // এর উত্তরগুলোও মুছে যায় (cascade)
+  const { count } = await prisma.question.deleteMany({ where: { id, form: { ownerId } } });
+  if (count === 0) throw new AppError(404, "Question not found");
   return { formId: q.formId };
 }
 

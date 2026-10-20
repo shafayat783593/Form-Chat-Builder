@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { notifyOnResponse } from "@/lib/notify";
 import { validateAnswer, type QuestionType } from "@/lib/field-types";
 import type { SubmitResponseInput } from "./response.schema";
 
@@ -14,6 +15,9 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
     where: { slug, status: "PUBLISHED", isTemplate: false },
     select: {
       id: true,
+      title: true,
+      notifyOnResponse: true,
+      notifyEmails: true,
       questions: {
         select: {
           id: true,
@@ -79,7 +83,7 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
   // Only the origin is stored - never the full URL, path or query string.
   const sourceUrl = toOrigin(input.sourceUrl);
 
-  return prisma.response.create({
+  const response = await prisma.response.create({
     data: {
       formId: form.id,
       sourceUrl,
@@ -87,6 +91,24 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
     },
     select: { id: true },
   });
+
+  // Fire-and-forget notification: never fail or slow the response.
+  if (form.notifyOnResponse && form.notifyEmails.length > 0) {
+    const submittedAnswers = answers.map((a) => {
+      const q = questions.get(a.questionId);
+      return { label: q?.label ?? a.questionId, value: a.value };
+    });
+    void notifyOnResponse({
+      formTitle: form.title,
+      formSlug: slug,
+      responseId: response.id,
+      answers: submittedAnswers,
+      createdAt: new Date(),
+      notifyEmails: form.notifyEmails,
+    });
+  }
+
+  return response;
 }
 
 /**
@@ -120,10 +142,11 @@ export async function listResponsesForOwner(formId: string, ownerId: string, pag
       orderBy: { createdAt: "desc" },
       skip: (safePage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      select: {
-        id: true, createdAt: true,
-        answers: { select: { questionId: true, value: true } },
-      },
+    select: {
+      id: true, createdAt: true,
+      answers: { select: { questionId: true, value: true } },
+      sourceUrl: true,
+    },
     }),
   ]);
 
@@ -134,6 +157,7 @@ export async function listResponsesForOwner(formId: string, ownerId: string, pag
     responses: rows.map((r) => ({
       id: r.id,
       createdAt: r.createdAt,
+      sourceUrl: r.sourceUrl,
       answers: Object.fromEntries(r.answers.map((a) => [a.questionId, a.value])),
     })),
   };
@@ -148,6 +172,7 @@ export async function getResponseForOwner(id: string, ownerId: string) {
       answers: {
         select: { value: true, question: { select: { id: true, label: true, type: true, order: true } } },
       },
+      sourceUrl: true,
     },
   });
   if (!r) throw new AppError(404, "Response not found");
@@ -156,6 +181,7 @@ export async function getResponseForOwner(id: string, ownerId: string) {
     id: r.id,
     createdAt: r.createdAt,
     form: r.form,
+    sourceUrl: r.sourceUrl,
     answers: r.answers
       .sort((a, b) => a.question.order - b.question.order)
       .map((a) => ({
@@ -171,6 +197,6 @@ export async function deleteResponse(id: string, ownerId: string) {
     select: { formId: true },
   });
   if (!r) throw new AppError(404, "Response not found");
-  await prisma.response.delete({ where: { id } });
+  await prisma.response.deleteMany({ where: { id, form: { ownerId } } });
   return { formId: r.formId };
 }

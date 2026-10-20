@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteFormAction, setFormStatusAction } from "../form.actions";
-import { ExternalLink, Loader2, Trash2 } from "lucide-react";
+import { ExternalLink, Loader2, Trash2, Copy } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -19,6 +19,7 @@ type Props = {
 export function FormRow({ form }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [copied, setCopied] = useState(false);
   const published = form.status === "PUBLISHED";
 
   function toggle() {
@@ -38,6 +39,16 @@ export function FormRow({ form }: Props) {
     });
   }
 
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/f/${form.slug}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard may be blocked; the link is selectable in the field.
+    }
+  }
+
   return (
     <li className="rounded-xl border bg-card p-4 transition-colors hover:bg-muted/30">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -53,16 +64,31 @@ export function FormRow({ form }: Props) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/dashboard/forms/${form.id}/edit`}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ExternalLink className="size-3.5" />
+            Edit
+          </Link>
+
+          <Link
+            href={`/dashboard/forms/${form.id}/responses`}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ExternalLink className="size-3.5" />
+            Responses
+          </Link>
+
           {published ? (
-            <Link
-              href={`/f/${form.slug}`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={copyLink}
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <ExternalLink className="size-3.5" />
-              View
-            </Link>
+              <Copy className="size-3.5" />
+              {copied ? "Copied" : "Copy link"}
+            </button>
           ) : null}
 
           <button

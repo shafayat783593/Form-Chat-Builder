@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireUserPage } from "@/lib/session";
 import { DashboardPageHeader } from "@/modules/dashboard/ui/dashboard-page-header";
 import { DashboardPanel } from "@/modules/dashboard/ui/dashboard-panel";
@@ -13,7 +14,7 @@ import {
   MousePointerClick,
 } from "lucide-react";
 
-export default async function DashboardPage() {
+async function DashboardData() {
   const user = await requireUserPage();
   const [stats, forms, templates] = await Promise.all([
     getDashboardStats(user.id),
@@ -25,13 +26,11 @@ export default async function DashboardPage() {
   const totalAnswers = forms.reduce((sum, f) => sum + f._count.responses, 0);
 
   return (
-    <div className="space-y-6">
+    <>
       <DashboardPageHeader
         title="Dashboard"
         subtitle={`Welcome back, ${user.name}. Build a form, publish it, and embed the widget on any site.`}
-        action={
-          <CreateFormDialog templates={templates} />
-        }
+        action={<CreateFormDialog templates={templates} />}
       />
 
       <StatCards
@@ -98,6 +97,14 @@ export default async function DashboardPage() {
           </ul>
         )}
       </DashboardPanel>
-    </div>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-muted-foreground">Loading dashboard…</div>}>
+      <DashboardData />
+    </Suspense>
   );
 }
