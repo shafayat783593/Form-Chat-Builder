@@ -248,33 +248,33 @@ src/
 ├─ proxy.ts                                  # replaces middleware.ts (cookie-presence redirect for /dashboard and /admin only)
 ├─ app/
 │  ├─ (public)/
-│  │  ├─ (marketing)/{layout.tsx, page.tsx}  # landing
-│  │  ├─ (marketing)/templates/page.tsx            # NEW public gallery
-│  │  ├─ (marketing)/templates/[slug]/page.tsx     # NEW public read-only preview + "Use this template"
-│  │  └─ (auth)/{layout.tsx, login/page.tsx, signup/page.tsx}
+│  │  ├─ (marketing)/{layout.tsx, page.tsx}              # landing — exists
+│  │  ├─ (marketing)/templates/page.tsx                  # NEW — not yet built (T12/T13)
+│  │  ├─ (marketing)/templates/[slug]/page.tsx           # NEW — not yet built (T13)
+│  │  └─ (auth)/{layout.tsx, login/page.tsx, signup/page.tsx}  # exist
+│  ├─ admin/                                             # NEW — roles system
+│  │  ├─ layout.tsx                                      # requireAdminPage guard — exists
+│  │  ├─ page.tsx                                        # redirects to /admin/templates — exists
+│  │  └─ templates/{page.tsx, [id]/edit/page.tsx}        # page.tsx exists (read-only list); [id]/edit not yet built (T10)
 │  ├─ dashboard/
-│  │  ├─ layout.tsx (exists)  page.tsx
-│  │  └─ forms/[id]/{edit/page.tsx, responses/page.tsx, responses/[responseId]/page.tsx}
-│  ├─ admin/                                 # NEW
-│  │  ├─ layout.tsx
-│  │  └─ templates/{page.tsx, [id]/edit/page.tsx}
-│  ├─ f/[slug]/page.tsx                      # NEW public full-page chat
-│  ├─ embed/[slug]/page.tsx                  # NEW iframe content for the widget
-│  └─ api/{auth/[...all]/route.ts, public/forms/[slug]/{route.ts, responses/route.ts}}
+│  │  ├─ layout.tsx  page.tsx                            # exist
+│  │  └─ forms/[id]/{edit/page.tsx, responses/page.tsx, responses/[responseId]/page.tsx}  # NOT built (T8/T11)
+│  ├─ f/[slug]/page.tsx                                  # NEW — not yet built (T4)
+│  ├─ embed/[slug]/page.tsx                              # NEW — not yet built (T4)
+│  └─ api/{auth/[...all]/route.ts, public/forms/[slug]/{route.ts, responses/route.ts}}  # exist
 ├─ modules/
-│  ├─ auth/  form/  question/  response/     # exist
-│  ├─ template/   {template.service.ts, template.actions.ts, template.schema.ts}   # NEW
-│  ├─ builder/    # NEW (shared by dashboard edit + admin template edit)
-│  │   └─ components/{builder-shell, top-bar, field-palette, question-canvas, question-card,
-│  │        options-editor, settings-panel, tabs/{general,style,notifications,prefill}-tab, preview-sheet}
-│  │   └─ use-builder-state.ts               # useReducer + dirty tracking
-│  ├─ chat/       # NEW shared chat component (embed, /f, builder preview)
-│  └─ public/home/{hero,features,how-it-works,templates-strip,demo-section,faq,cta}.tsx
-├─ lib/{prisma,auth,auth-client,session,errors,api,action,limits,rate-limit,slug}.ts
-public/widget.js                              # NEW (missing today)
-test-site/index.html                          # NEW (outside the app, other port)
-scripts/make-admin.ts                         # NEW
-prisma/{schema.prisma, seed.ts, migrations/}
+│  ├─ auth/  form/  question/  response/                 # exist (services + actions + Zod)
+│  ├─ template/   {template.service.ts}                  # exists — read-only admin list; template.actions.ts/template.schema.ts not yet built (T7/T10)
+│  ├─ builder/                                           # NEW — not yet built (T8)
+│  ├─ chat/                                              # NEW — not yet built (T4)
+│  └─ public/home/{hero,features,how-it-works,demo-section}.tsx  # exist
+│     └─ {templates-strip,faq,cta}.tsx                   # NOT built (T12)
+├─ lib/{prisma,auth,auth-client,session,roles,errors,api,action,utils}.ts  # exist
+│  └─ {limits,rate-limit,slug}.ts                        # NOT built (limits.ts = hard rule #6)
+public/widget.js                                         # NEW — not yet built (T5)
+test-site/index.html                                     # NEW — not yet built (T5)
+scripts/make-admin.ts                                    # NEW — exists (roles system)
+prisma/{schema.prisma, seed.ts, migrations/}             # exist
 ```
 
 ### 5.2 Hard rules
