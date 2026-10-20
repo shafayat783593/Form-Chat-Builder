@@ -1,7 +1,95 @@
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import type { SubmitResponseInput } from "./response.schema";
 
 const PAGE_SIZE = 20;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Public submission. Re-validates every answer on the server:
+ * unknown question id -> 400, invalid/required answers -> 422 with per-question details.
+ */
+export async function submitResponse(slug: string, input: SubmitResponseInput) {
+  const form = await prisma.form.findFirst({
+    where: { slug, status: "PUBLISHED", isTemplate: false },
+    select: {
+      id: true,
+      questions: {
+        select: { id: true, type: true, label: true, options: true, required: true },
+      },
+    },
+  });
+
+  if (!form) throw new AppError(404, "Form not found");
+
+  const questions = new Map(form.questions.map((q) => [q.id, q]));
+  const details: Record<string, string> = {};
+
+  // Unknown question ids are a client bug, not a validation error.
+  for (const answer of input.answers) {
+    if (!questions.has(answer.questionId)) {
+      throw new AppError(400, `Unknown question id: ${answer.questionId}`);
+    }
+  }
+
+  // One answer per question.
+  const seen = new Set<string>();
+  for (const answer of input.answers) {
+    if (seen.has(answer.questionId)) {
+      throw new AppError(400, "Duplicate answer for the same question");
+    }
+    seen.add(answer.questionId);
+  }
+
+  // Required questions must be answered.
+  for (const question of form.questions) {
+    if (!question.required) continue;
+    const answer = input.answers.find((a) => a.questionId === question.id);
+    if (!answer || answer.value.trim() === "") {
+      details[question.id] = "This question is required";
+    }
+  }
+
+  // Per-type validation.
+  for (const answer of input.answers) {
+    const question = questions.get(answer.questionId);
+    if (!question) continue;
+    const value = answer.value.trim();
+    if (value === "") continue;
+
+    if (question.type === "EMAIL" && !EMAIL_RE.test(value)) {
+      details[question.id] = "Enter a valid email address";
+    }
+
+    if (question.type === "CHOICE") {
+      const options = Array.isArray(question.options) ? (question.options as string[]) : [];
+      if (!options.includes(value)) {
+        details[question.id] = "Choose one of the available options";
+      }
+    }
+
+    if (question.type === "YES_NO" && value !== "yes" && value !== "no") {
+      details[question.id] = "Answer must be yes or no";
+    }
+  }
+
+  if (Object.keys(details).length > 0) {
+    throw new AppError(422, "Some answers are invalid", details);
+  }
+
+  const answers = input.answers
+    .map((a) => ({ questionId: a.questionId, value: a.value.trim() }))
+    .filter((a) => a.value !== "");
+
+  return prisma.response.create({
+    data: {
+      formId: form.id,
+      answers: { create: answers },
+    },
+    select: { id: true },
+  });
+}
 
 export async function listResponsesForOwner(formId: string, ownerId: string, page = 1) {
   const form = await prisma.form.findFirst({

@@ -1,7 +1,11 @@
-import { PrismaClient } from "@prisma/client/extension";
+// Runs under `npx tsx prisma/seed.ts` — relative imports only (no @/),
+// per the Prisma 7 rules in PRD section 3.
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client";
 
-// import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+});
 
 async function main() {
   const user = await prisma.user.upsert({
@@ -29,4 +33,5 @@ async function main() {
     },
   });
 }
+
 main().finally(() => prisma.$disconnect());

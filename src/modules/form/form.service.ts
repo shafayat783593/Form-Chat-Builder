@@ -14,7 +14,7 @@ export async function createForm(ownerId: string, input: CreateFormInput) {
 
 export async function listForms(ownerId: string) {
   return prisma.form.findMany({
-    where: { ownerId },
+    where: { ownerId, isTemplate: false },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true, title: true, slug: true, status: true, updatedAt: true,
@@ -25,10 +25,57 @@ export async function listForms(ownerId: string) {
 
 export async function getDashboardStats(ownerId: string) {
   const [forms, responses] = await Promise.all([
-    prisma.form.count({ where: { ownerId } }),
-    prisma.response.count({ where: { form: { ownerId } } }),
+    prisma.form.count({ where: { ownerId, isTemplate: false } }),
+    prisma.response.count({ where: { form: { ownerId, isTemplate: false } } }),
   ]);
   return { forms, responses };
+}
+
+/**
+ * Public read of a form. Only PUBLISHED, non-template forms are visible and no
+ * internal fields (ownerId, status, isTemplate, ids of the owner) are exposed.
+ * Returns null when the slug does not exist, is not published, or is a template.
+ */
+export async function getPublishedFormBySlug(slug: string) {
+  const form = await prisma.form.findFirst({
+    where: { slug, status: "PUBLISHED", isTemplate: false },
+    select: {
+      slug: true,
+      title: true,
+      description: true,
+      welcomeText: true,
+      completionText: true,
+      themeColor: true,
+      questions: {
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          type: true,
+          label: true,
+          options: true,
+          required: true,
+        },
+      },
+    },
+  });
+
+  if (!form) return null;
+
+  return {
+    slug: form.slug,
+    title: form.title,
+    description: form.description,
+    welcomeText: form.welcomeText,
+    completionText: form.completionText,
+    themeColor: form.themeColor,
+    questions: form.questions.map((q) => ({
+      id: q.id,
+      type: q.type,
+      label: q.label,
+      options: Array.isArray(q.options) ? (q.options as string[]) : null,
+      required: q.required,
+    })),
+  };
 }
 
 export async function getFormForOwner(id: string, ownerId: string) {

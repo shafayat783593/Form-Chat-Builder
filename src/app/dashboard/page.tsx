@@ -1,8 +1,16 @@
 import { requireUserPage } from "@/lib/session";
+import { DashboardPageHeader } from "@/modules/dashboard/ui/dashboard-page-header";
+import { DashboardPanel } from "@/modules/dashboard/ui/dashboard-panel";
+import { StatCards } from "@/modules/dashboard/ui/stat-cards";
 import { FormRow } from "@/modules/form/components/form-row";
 import { NewFormForm } from "@/modules/form/components/new-form-form";
 import { getDashboardStats, listForms } from "@/modules/form/form.service";
-
+import {
+  ClipboardList,
+  FileText,
+  MessageSquare,
+  MousePointerClick,
+} from "lucide-react";
 
 export default async function DashboardPage() {
   const user = await requireUserPage();
@@ -11,26 +19,71 @@ export default async function DashboardPage() {
     listForms(user.id),
   ]);
 
+  const published = forms.filter((f) => f.status === "PUBLISHED").length;
+  const totalAnswers = forms.reduce((sum, f) => sum + f._count.responses, 0);
+
   return (
-    <div className="space-y-8">
-      <section className="grid grid-cols-2 gap-4">
-        <Stat label="Total forms" value={stats.forms} />
-        <Stat label="Total responses" value={stats.responses} />
-      </section>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Dashboard"
+        subtitle={`Welcome back, ${user.name}. Build a form, publish it, and embed the widget on any site.`}
+      />
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Create a form</h2>
+      <StatCards
+        stats={[
+          {
+            label: "Total forms",
+            value: String(stats.forms),
+            hint: "All forms you own",
+            icon: FileText,
+            tone: "violet",
+          },
+          {
+            label: "Published",
+            value: String(published),
+            hint: "Live on the widget",
+            icon: MousePointerClick,
+            tone: "green",
+          },
+          {
+            label: "Total responses",
+            value: String(stats.responses),
+            hint: "Submissions collected",
+            icon: MessageSquare,
+            tone: "blue",
+          },
+          {
+            label: "Drafts",
+            value: String(stats.forms - published),
+            hint: "Not published yet",
+            icon: ClipboardList,
+            tone: "amber",
+          },
+        ]}
+      />
+
+      <DashboardPanel
+        title="Create a form"
+        subtitle="Give your form a title. You can add questions right after."
+      >
         <NewFormForm />
-      </section>
+      </DashboardPanel>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Your forms</h2>
+      <DashboardPanel
+        id="forms"
+        title="Your forms"
+        subtitle={
+          forms.length === 0
+            ? undefined
+            : `${forms.length} form${forms.length === 1 ? "" : "s"} · ${totalAnswers} response${totalAnswers === 1 ? "" : "s"}`
+        }
+      >
         {forms.length === 0 ? (
-          <p className="rounded-md border border-dashed bg-white p-6 text-center text-sm text-gray-500">
+          <p className="rounded-md border border-dashed bg-muted/40 p-8 text-center text-sm text-muted-foreground">
             No forms yet. Create your first one above.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {forms.map((f) => (
               <FormRow
                 key={f.id}
@@ -46,16 +99,7 @@ export default async function DashboardPage() {
             ))}
           </ul>
         )}
-      </section>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border bg-white p-4">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
+      </DashboardPanel>
     </div>
   );
 }

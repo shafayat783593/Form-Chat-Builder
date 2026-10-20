@@ -10,6 +10,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  ADMIN
+  OWNER
+}
+
 enum FormStatus {
   DRAFT
   PUBLISHED
@@ -22,12 +27,18 @@ enum QuestionType {
   YES_NO
 }
 
+enum WidgetPosition {
+  RIGHT
+  LEFT
+}
+
 model User {
   id            String    @id
   name          String
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  role          Role      @default(OWNER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -86,34 +97,50 @@ model Verification {
 }
 
 model Form {
-  id             String     @id @default(cuid())
-  slug           String     @unique
-  title          String
-  description    String?
-  welcomeText    String     @default("Hi! Let's get started.")
-  completionText String     @default("Thanks! Your response has been recorded.")
-  themeColor     String     @default("#4f46e5")
-  status         FormStatus @default(DRAFT)
-  ownerId        String
-  owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  questions      Question[]
-  responses      Response[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id               String         @id @default(cuid())
+  slug             String         @unique
+  title            String
+  description      String?
+  welcomeText      String         @default("Hi! Mind answering a few quick questions?")
+  completionText   String         @default("Thanks! Your response has been recorded.")
+  themeColor       String         @default("#4f46e5")
+  launcherLabel    String         @default("Chat with us")
+  widgetPosition   WidgetPosition @default(RIGHT)
+  status           FormStatus     @default(DRAFT)
+  publishedAt      DateTime?
+  notifyOnResponse Boolean        @default(false)
+  notifyEmails     String[]       @default([])
 
-  @@index([ownerId])
+  // Templates (created by ADMIN only)
+  isTemplate        Boolean @default(false)
+  templateSlug      String? @unique
+  templateCategory  String?
+  sourceTemplateId  String?
+  sourceTemplate    Form?   @relation("TemplateCopies", fields: [sourceTemplateId], references: [id], onDelete: SetNull)
+  copies            Form[]  @relation("TemplateCopies")
+
+  ownerId    String
+  owner      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  questions  Question[]
+  responses  Response[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([ownerId, createdAt])
+  @@index([isTemplate, status])
 }
 
 model Question {
-  id      String       @id @default(cuid())
-  formId  String
-  form    Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
-  type    QuestionType
-  label   String
-  options Json? // CHOICE -> string[]
-  required Boolean     @default(true)
-  order   Int
-  answers Answer[]
+  id         String       @id @default(cuid())
+  formId     String
+  form       Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  type       QuestionType
+  label      String
+  options    Json? // CHOICE -> string[]
+  required   Boolean      @default(true)
+  order      Int
+  prefillKey String?
+  answers    Answer[]
 
   @@index([formId, order])
 }
@@ -122,6 +149,7 @@ model Response {
   id        String   @id @default(cuid())
   formId    String
   form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  sourceUrl String?
   answers   Answer[]
   createdAt DateTime @default(now())
 

@@ -23,6 +23,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -74,6 +77,9 @@
   --chart-3: oklch(0.6 0.118 184.704);
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
+  --success: oklch(0.596 0.145 163.225);
+  --warning: oklch(0.769 0.188 70.08);
+  --info: oklch(0.623 0.188 264.052);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -109,6 +115,9 @@
   --chart-3: oklch(0.6 0.118 184.704);
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
+  --success: oklch(0.696 0.17 162.48);
+  --warning: oklch(0.828 0.189 84.429);
+  --info: oklch(0.685 0.169 237.323);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.704 0.14 182.503);
@@ -127,6 +136,72 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ---------------------------------------------------------- */
+/* Dashboard design-system utilities                          */
+/* ---------------------------------------------------------- */
+
+@utility gradient-brand {
+  background-image: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--color-chart-2) 50%,
+    var(--color-chart-4) 100%
+  );
+}
+
+@utility shadow-soft {
+  box-shadow:
+    0 1px 2px 0 oklch(0 0 0 / 0.04),
+    0 1px 3px 0 oklch(0 0 0 / 0.06);
+}
+
+@utility shadow-pop {
+  box-shadow:
+    0 4px 6px -1px oklch(0 0 0 / 0.08),
+    0 10px 20px -4px oklch(0 0 0 / 0.1);
+}
+
+@utility glass {
+  background-color: color-mix(in oklch, var(--background) 80%, transparent);
+  backdrop-filter: blur(12px) saturate(180%);
+}
+
+@utility dashboard-bg {
+  background-color: color-mix(in oklch, var(--background) 94%, var(--muted));
+}
+
+@utility card-hover {
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  &:hover {
+    box-shadow:
+      0 2px 4px 0 oklch(0 0 0 / 0.05),
+      0 12px 24px -8px oklch(0 0 0 / 0.12);
+  }
+}
+
+@utility sidebar-link-active {
+  background-color: var(--color-sidebar-accent);
+  color: var(--color-sidebar-accent-foreground);
+  font-weight: 600;
+}
+
+@utility animate-slide-up {
+  animation: slide-up 0.4s ease both;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

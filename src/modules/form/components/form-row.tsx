@@ -2,12 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { deleteFormAction, setFormStatusAction } from "../form.actions";
+import { ExternalLink, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
   form: {
-    id: string; title: string; slug: string;
+    id: string;
+    title: string;
+    slug: string;
     status: "DRAFT" | "PUBLISHED";
-    responses: number; questions: number;
+    responses: number;
+    questions: number;
   };
 };
 
@@ -34,29 +39,59 @@ export function FormRow({ form }: Props) {
   }
 
   return (
-    <li className="rounded-xl border bg-white p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-medium">{form.title}</p>
-          <p className="text-sm text-gray-500">
-            {form.questions} questions · {form.responses} responses ·{" "}
-            <span className={published ? "text-green-600" : "text-gray-500"}>
+    <li className="rounded-xl border bg-card p-4 transition-colors hover:bg-muted/30">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{form.title}</p>
+          <p className="text-sm text-muted-foreground">
+            {form.questions} question{form.questions === 1 ? "" : "s"} ·{" "}
+            {form.responses} response{form.responses === 1 ? "" : "s"} ·{" "}
+            <span className={published ? "text-success" : "text-muted-foreground"}>
               {published ? "Published" : "Draft"}
             </span>
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={toggle} disabled={pending}
-            className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-60">
+
+        <div className="flex flex-wrap items-center gap-2">
+          {published ? (
+            <Link
+              href={`/f/${form.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ExternalLink className="size-3.5" />
+              View
+            </Link>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:opacity-60"
+          >
+            {pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
             {published ? "Unpublish" : "Publish"}
           </button>
-          <button onClick={remove} disabled={pending}
-            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60">
+
+          <button
+            type="button"
+            onClick={remove}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 py-1.5 text-sm text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
+          >
+            <Trash2 className="size-3.5" />
             Delete
           </button>
         </div>
       </div>
-      {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
+
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
     </li>
   );
 }

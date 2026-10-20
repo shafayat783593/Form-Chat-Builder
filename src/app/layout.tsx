@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/public/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 <html lang="en" suppressHydrationWarning>
   <body>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      {children}
+      <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Loading…</div>}>
+        {children}
+      </Suspense>
       <Toaster />
     </ThemeProvider>
   </body>
