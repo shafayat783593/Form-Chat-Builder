@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Monitor, Tablet, Smartphone, ArrowLeft } from "lucide-react";
 import { ClassicForm, type RuntimeForm } from "@/modules/form-runtime/classic-form";
+import { Chat } from "@/modules/chat/chat";
 import { cn } from "@/lib/utils";
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -136,7 +137,14 @@ export function FormPreview({
           ) : null}
 
           <div className="mt-8">
-            <ClassicForm form={runtimeForm} live={false} />
+            {form.displayMode === "FOCUS" ? (
+              // Focus mode renders the same chat the visitor sees, but nothing is sent.
+              <div className="-mx-6 -mt-8 sm:-mx-10 sm:-mt-10">
+                <Chat form={runtimeForm} previewMode />
+              </div>
+            ) : (
+              <ClassicForm form={runtimeForm} live={false} />
+            )}
           </div>
         </div>
       </div>

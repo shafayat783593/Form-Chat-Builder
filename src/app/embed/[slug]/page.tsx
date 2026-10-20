@@ -7,12 +7,16 @@ import { CloseBar } from "@/modules/chat/close-bar";
 
 export default async function EmbedPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // Opt into request-time rendering (cacheComponents is enabled).
   await connection();
   const { slug } = await params;
+  const query = await searchParams;
+
   const form = await getPublishedFormBySlug(slug);
   if (!form) notFound();
 
@@ -33,6 +37,7 @@ export default async function EmbedPage({
       label: q.label,
       options: q.options,
       required: q.required,
+      prefillKey: q.prefillKey,
       placeholder: q.placeholder,
       textColor: q.textColor,
       fontSize: q.fontSize,
@@ -42,44 +47,34 @@ export default async function EmbedPage({
   };
 
   // FOCUS = one question at a time (chat), CLASSIC = the whole form on one page.
-  if (form.displayMode === "FOCUS") {
-    return (
-      <div className="m-0 p-0 bg-white font-sans antialiased text-black min-h-screen flex flex-col">
-        <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
-          <div className="flex items-center gap-2">
-            <div
-              className="size-8 rounded-full flex items-center justify-center text-[11px] font-medium shadow-sm"
-              style={{ backgroundColor: form.themeColor, color: "#ffffff" }}
-            >
-              {form.title.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 text-sm font-medium truncate">{form.title}</div>
-          </div>
-          <CloseBar />
-        </header>
-        <div className="flex-1 w-full overflow-hidden">
-          <Chat form={runtimeForm} />
-        </div>
-      </div>
-    );
-  }
+  const isFocus = form.displayMode === "FOCUS";
 
   return (
-    <div className="m-0 p-0 bg-white font-sans antialiased text-black min-h-screen flex flex-col">
-      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+    <div
+      className="m-0 flex min-h-screen flex-col bg-white font-sans antialiased"
+      style={{ color: "#0f172a" }}
+    >
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center gap-2">
           <div
-            className="size-8 rounded-full flex items-center justify-center text-[11px] font-medium shadow-sm"
+            className="grid size-8 place-items-center rounded-full text-[11px] font-medium shadow-sm"
             style={{ backgroundColor: form.themeColor, color: "#ffffff" }}
           >
             {form.title.charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 text-sm font-medium truncate">{form.title}</div>
+          <div className="truncate text-sm font-medium">{form.title}</div>
         </div>
         <CloseBar />
       </header>
-      <div className="flex-1 w-full overflow-y-auto px-4 py-6">
-        <ClassicForm form={runtimeForm} live />
+
+      <div className="flex-1 overflow-y-auto">
+        {isFocus ? (
+          <Chat form={runtimeForm} searchParams={query} />
+        ) : (
+          <div className="px-4 py-6">
+            <ClassicForm form={runtimeForm} live searchParams={query} />
+          </div>
+        )}
       </div>
     </div>
   );

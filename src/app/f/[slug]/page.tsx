@@ -5,12 +5,16 @@ import { ClassicForm, type RuntimeForm } from "@/modules/form-runtime/classic-fo
 
 export default async function FormPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // Opt into request-time rendering (cacheComponents is enabled).
   await connection();
   const { slug } = await params;
+  const query = await searchParams;
+
   const form = await getPublishedFormBySlug(slug);
   if (!form) notFound();
 
@@ -31,6 +35,7 @@ export default async function FormPage({
       label: q.label,
       options: q.options,
       required: q.required,
+      prefillKey: q.prefillKey,
       placeholder: q.placeholder,
       textColor: q.textColor,
       fontSize: q.fontSize,
@@ -54,7 +59,7 @@ export default async function FormPage({
           ) : null}
 
           <div className="mt-8">
-            <ClassicForm form={runtimeForm} live />
+            <ClassicForm form={runtimeForm} live searchParams={query} />
           </div>
         </div>
       </div>

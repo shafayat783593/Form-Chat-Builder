@@ -20,6 +20,7 @@ import {
   type QuestionType,
 } from "@/lib/field-types";
 import { fieldMeta } from "@/modules/builder/field-meta";
+import { collectPrefill, type SearchParams } from "./prefill";
 
 export interface RuntimeQuestion {
   id: string;
@@ -27,6 +28,7 @@ export interface RuntimeQuestion {
   label: string;
   options: string[] | null;
   required: boolean;
+  prefillKey?: string | null;
   placeholder?: string | null;
   textColor?: string | null;
   fontSize?: number | null;
@@ -53,10 +55,15 @@ interface ClassicFormProps {
   /** When set the form actually submits to the public API. */
   live?: boolean;
   onComplete?: () => void;
+  /** Query string used to pre-answer questions that have a prefillKey. */
+  searchParams?: SearchParams;
 }
 
-export function ClassicForm({ form, live = false, onComplete }: ClassicFormProps) {
-  const [values, setValues] = useState<Record<string, string>>({});
+export function ClassicForm({ form, live = false, onComplete, searchParams }: ClassicFormProps) {
+  // Prefill: only values that pass the normal validation are accepted.
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    collectPrefill(form.questions, searchParams),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [page, setPage] = useState(0);
   const [submitting, setSubmitting] = useState(false);
