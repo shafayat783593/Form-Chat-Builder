@@ -6,15 +6,12 @@ import {
   MAX_PLACEHOLDER,
   MIN_FONT_SIZE,
   QUESTION_TYPES,
+  optionsSchema,
 } from "@/lib/field-types";
 
 const label = z.string().trim().min(1).max(200);
 const required = z.boolean().default(true);
-const options = z
-  .array(z.string().trim().min(1).max(100))
-  .min(2)
-  .max(10)
-  .refine((o) => new Set(o).size === o.length, "Options must be unique");
+const options = optionsSchema;
 
 export const questionTypeSchema = z.enum(QUESTION_TYPES);
 

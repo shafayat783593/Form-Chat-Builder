@@ -1,10 +1,4 @@
-/**
- * The platform has exactly two roles (PRD section 2).
- * - OWNER  : every person who signs up. Owns their own forms and responses.
- * - ADMIN  : platform operator. Created only by scripts/make-admin.ts, never
- *            through the UI or the API. An admin still only sees their OWN
- *            forms and responses - an admin is not a super-reader.
- */
+
 export const ROLES = ["ADMIN", "OWNER"] as const;
 
 export type Role = (typeof ROLES)[number];

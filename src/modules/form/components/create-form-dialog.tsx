@@ -29,9 +29,11 @@ type TemplateItem = {
 
 interface CreateFormDialogProps {
   templates: TemplateItem[];
+  /** Dashboard route used after a form is created. */
+  formPathPrefix?: string;
 }
 
-export function CreateFormDialog({ templates }: CreateFormDialogProps) {
+export function CreateFormDialog({ templates, formPathPrefix = "/owner/forms" }: CreateFormDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -44,9 +46,10 @@ export function CreateFormDialog({ templates }: CreateFormDialogProps) {
     e.preventDefault();
     setError(null);
     const trimmed = title.trim();
-    if (!trimmed) return setError("Enter a form title");
+    if (tab === "blank" && !trimmed) return setError("Enter a form title");
 
-    const payload: { title: string; templateId?: string } = { title: trimmed };
+    const payload: { title?: string; templateId?: string } = {};
+    if (trimmed) payload.title = trimmed;
     if (tab === "template" && selectedTemplateId) payload.templateId = selectedTemplateId;
 
     startTransition(async () => {
@@ -56,7 +59,7 @@ export function CreateFormDialog({ templates }: CreateFormDialogProps) {
       setTitle("");
       setTab("blank");
       setSelectedTemplateId(null);
-      router.push(`/dashboard/forms/${(res.data as { id: string }).id}/edit`);
+      router.push(`${formPathPrefix}/${(res.data as { id: string }).id}/edit`);
     });
   }
 
@@ -75,16 +78,12 @@ export function CreateFormDialog({ templates }: CreateFormDialogProps) {
           </DialogHeader>
 
           <form onSubmit={onSubmit} className="mt-4 flex flex-col gap-4">
-            <Label className="text-sm font-medium">Form title</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Course enrollment"
-              maxLength={120}
-              required
-              disabled={pending}
-              autoFocus
-            />
+            {tab === "blank" ? (
+              <>
+                <Label className="text-sm font-medium">Form title</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Course enrollment" maxLength={120} required disabled={pending} autoFocus />
+              </>
+            ) : null}
 
             <Tabs value={tab} onValueChange={setTab} className="w-full">
               <TabsList>
@@ -136,7 +135,7 @@ export function CreateFormDialog({ templates }: CreateFormDialogProps) {
             <DialogFooter>
               <Button
                 type="submit"
-                disabled={pending || !title.trim() || (tab === "template" && !selectedTemplateId)}
+                disabled={pending || (tab === "blank" && !title.trim()) || (tab === "template" && !selectedTemplateId)}
               >
                 {pending ? <Plus className="size-4 animate-spin" /> : null}
                 {pending ? "Creating…" : "Create form"}

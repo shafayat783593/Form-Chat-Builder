@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getSession } from "@/lib/session";
@@ -6,7 +7,21 @@ import { UseTemplateButton } from "@/modules/template/use-template-button";
 import { fieldMeta } from "@/modules/builder/field-meta";
 import { Badge } from "@/components/ui/badge";
 
-export default async function TemplatePage({
+export default function TemplatePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <Suspense fallback={<div className="text-sm text-muted-foreground">Loading template…</div>}>
+        <TemplateContent params={params} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function TemplateContent({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -19,7 +34,7 @@ export default async function TemplatePage({
   const session = await getSession();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <>
       <div className="flex flex-wrap items-center gap-2">
         {template.templateCategory ? (
           <Badge variant="secondary">{template.templateCategory}</Badge>
@@ -69,7 +84,6 @@ export default async function TemplatePage({
             <div className="mt-4">
               <UseTemplateButton
                 templateId={template.id}
-                templateTitle={template.title}
                 templateSlug={template.templateSlug ?? slug}
                 signedIn={!!session}
               />
@@ -77,6 +91,6 @@ export default async function TemplatePage({
           </div>
         </aside>
       </div>
-    </div>
+    </>
   );
 }

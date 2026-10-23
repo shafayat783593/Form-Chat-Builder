@@ -20,6 +20,16 @@ export async function createTemplateAction(input: unknown) {
   });
 }
 
+export async function createTemplateFromFormAction(formId: string) {
+  return run(async () => {
+    const user = await requireAdmin();
+    const result = await templateService.createTemplateFromForm(user.id, formId);
+    revalidatePath("/admin/forms");
+    revalidatePath("/admin/templates");
+    return result;
+  });
+}
+
 export async function setTemplateStatusAction(
   templateId: string,
   status: "DRAFT" | "PUBLISHED",

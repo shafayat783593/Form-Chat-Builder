@@ -115,34 +115,8 @@ export function GeneralTab({
             checked={settings.multiPageForm}
             onCheckedChange={(checked) => onUpdate({ multiPageForm: checked })}
           />
-          Multi-page form
+          Multi-page form <span className="text-muted-foreground">(not used in chat)</span>
         </label>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Display mode</span>
-          <div className="flex flex-col gap-2">
-            {(
-              [
-                { id: "CLASSIC", label: "Classic", hint: "All questions shown together on one page" },
-                { id: "FOCUS", label: "Focus", hint: "One question at a time; page breaks are ignored" },
-              ] as const
-            ).map((mode) => (
-              <label key={mode.id} className="flex cursor-pointer items-start gap-2 text-xs">
-                <input
-                  type="radio"
-                  name="displayMode"
-                  checked={settings.displayMode === mode.id}
-                  onChange={() => onUpdate({ displayMode: mode.id })}
-                  className="mt-0.5 size-3.5 accent-primary"
-                />
-                <span>
-                  <span className="font-medium">{mode.label}</span>
-                  <span className="block text-[11px] text-muted-foreground">{mode.hint}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
 
         <label className="flex cursor-pointer items-center gap-2 text-xs">
           <Switch

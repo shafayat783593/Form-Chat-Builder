@@ -23,6 +23,8 @@ interface TopBarProps {
   dirty: boolean;
   saving: boolean;
   publishing: boolean;
+  /** Set to false to block saving (e.g. invalid options). */
+  canSave?: boolean;
   onBack: () => void;
   onTitleChange: (value: string) => void;
   onSave: () => void;
@@ -43,6 +45,7 @@ export function TopBar({
   dirty,
   saving,
   publishing,
+  canSave = true,
   onBack,
   onTitleChange,
   onSave,
@@ -147,7 +150,7 @@ export function TopBar({
         <button
           type="button"
           onClick={onSave}
-          disabled={!dirty || saving || publishing}
+          disabled={!dirty || !canSave || saving || publishing}
           className="hidden h-8 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:pointer-events-none sm:inline-flex"
           aria-label="Save"
         >

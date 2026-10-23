@@ -1,7 +1,13 @@
 /*!
  * FormChat embed widget — plain JS, no dependencies.
- * Include: <script src="{APP_ORIGIN}/widget.js" data-form="{slug}" [data-color="#rrggbb"] [data-position="left|right"]></script>
- * Idempotent: a second include does nothing.
+ *
+ *   <script src="{APP}/widget.js" data-form="{slug}"
+ *           data-color="#0f766e" data-position="left"
+ *           data-prefill='{"email":"a@b.com"}'></script>
+ *
+ * Idempotent: including the script twice does nothing the second time.
+ * Every class and id it creates is prefixed with `fw-` and it never touches
+ * the host page's styles.
  */
 (function () {
   "use strict";
@@ -15,7 +21,7 @@
   var appOrigin;
   try {
     appOrigin = new URL(script.src).origin;
-  } catch (e) {
+  } catch {
     return;
   }
 
@@ -24,20 +30,250 @@
 
   var dataColor = script.getAttribute("data-color");
   var dataPosition = script.getAttribute("data-position"); // "left" | "right"
+  var dataPrefill = script.getAttribute("data-prefill");
 
   var themeColor = "#4f46e5";
   var launcherLabel = "Chat with us";
   var widgetPosition = "RIGHT"; // "RIGHT" | "LEFT"
 
-  var rootId = "fw-root-" + slug;
-  if (document.getElementById(rootId)) return;
+  var launcher = null;
+  var panel = null;
+  var iframe = null;
+  var isOpen = false;
 
-  // ---------------------------------------------------------------------------
-  // Fetch form config from the public API (same origin as this script).
-  // ---------------------------------------------------------------------------
-  fetch(appOrigin + "/api/public/forms/" + encodeURIComponent(slug), {
-    method: "GET",
-  })
+  // ---------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------
+  function isMobile() {
+    return window.matchMedia("(max-width: 480px)").matches;
+  }
+
+  function contrastText(hex) {
+    var m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (!m) return "#000000";
+    var r = parseInt(m[1], 16) / 255;
+    var g = parseInt(m[2], 16) / 255;
+    var b = parseInt(m[3], 16) / 255;
+    var lum = function (c) {
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    var y = 0.2126 * lum(r) + 0.7152 * lum(g) + 0.0722 * lum(b);
+    return y > 0.179 ? "#000000" : "#ffffff";
+  }
+
+  /** Parses data-prefill defensively: a plain object of string values, max 20 keys. */
+  function parsePrefill(raw) {
+    if (!raw) return [];
+    var parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
+
+    var out = [];
+    var keys = Object.keys(parsed);
+    if (keys.length > 20) keys = keys.slice(0, 20);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var value = parsed[key];
+      if (typeof key !== "string" || typeof value !== "string") continue;
+      // Never let prefill override the reserved params.
+      if (key === "src" || key === "color") continue;
+      out.push([key, value]);
+    }
+    return out;
+  }
+
+  function buildIframeUrl() {
+    var params = ["src=" + encodeURIComponent(window.location.origin)];
+    if (dataColor && /^#[0-9a-fA-F]{6}$/.test(dataColor)) {
+      params.push("color=" + encodeURIComponent(dataColor));
+    }
+    var prefill = parsePrefill(dataPrefill);
+    for (var i = 0; i < prefill.length; i++) {
+      params.push(encodeURIComponent(prefill[i][0]) + "=" + encodeURIComponent(prefill[i][1]));
+    }
+    return appOrigin + "/embed/" + encodeURIComponent(slug) + "?" + params.join("&");
+  }
+
+  // ---------------------------------------------------------------------
+  // Build the UI
+  // ---------------------------------------------------------------------
+  function build() {
+    var side = widgetPosition === "LEFT" ? "left" : "right";
+
+    // Panel (hidden until first open).
+    panel = document.createElement("div");
+    panel.id = "fw-panel-" + slug;
+    panel.className = "fw-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", launcherLabel);
+    panel.style.position = "fixed";
+    panel.style.bottom = "96px";
+    panel.style[side] = "24px";
+    panel.style.width = "380px";
+    panel.style.height = "min(640px, calc(100dvh - 120px))";
+    panel.style.borderRadius = "16px";
+    panel.style.overflow = "hidden";
+    panel.style.boxShadow = "0 18px 48px rgba(0,0,0,0.24)";
+    panel.style.background = "#ffffff";
+    panel.style.zIndex = "2147483646";
+    panel.style.display = "none";
+    panel.style.opacity = "0";
+    panel.style.transform = "translateY(12px)";
+    panel.style.transition = "opacity 0.18s ease, transform 0.18s ease";
+    document.body.appendChild(panel);
+
+    // Launcher.
+    launcher = document.createElement("button");
+    launcher.id = "fw-btn-" + slug;
+    launcher.className = "fw-btn";
+    launcher.type = "button";
+    launcher.setAttribute("aria-label", launcherLabel);
+    launcher.setAttribute("aria-expanded", "false");
+    launcher.title = launcherLabel;
+    launcher.style.position = "fixed";
+    launcher.style.bottom = "24px";
+    launcher.style[side] = "24px";
+    launcher.style.zIndex = "2147483647";
+    launcher.style.width = "56px";
+    launcher.style.height = "56px";
+    launcher.style.borderRadius = "28px";
+    launcher.style.border = "none";
+    launcher.style.background = themeColor;
+    launcher.style.color = contrastText(themeColor);
+    launcher.style.fontSize = "24px";
+    launcher.style.lineHeight = "1";
+    launcher.style.cursor = "pointer";
+    launcher.style.display = "inline-flex";
+    launcher.style.alignItems = "center";
+    launcher.style.justifyContent = "center";
+    launcher.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    launcher.style.transition = "transform 0.15s ease";
+    launcher.textContent = "💬";
+    document.body.appendChild(launcher);
+
+    launcher.addEventListener("mouseenter", function () {
+      launcher.style.transform = "scale(1.05)";
+    });
+    launcher.addEventListener("mouseleave", function () {
+      launcher.style.transform = "scale(1)";
+    });
+    launcher.addEventListener("click", function () {
+      togglePanel();
+    });
+
+    // Close when the iframe asks us to.
+    window.addEventListener("message", function (ev) {
+      if (ev.origin !== appOrigin) return;
+      if (ev.data && ev.data.type === "fw:close") {
+        closePanel();
+      }
+    });
+
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && isOpen) {
+        closePanel();
+      }
+    });
+
+    window.addEventListener("resize", function () {
+      applyLayout();
+    });
+
+    applyLayout();
+  }
+
+  /** Desktop = side panel, mobile = fullscreen. */
+  function applyLayout() {
+    if (!panel || !launcher) return;
+    var side = widgetPosition === "LEFT" ? "left" : "right";
+    var mobile = isMobile();
+
+    if (mobile) {
+      panel.style.inset = "0";
+      panel.style.width = "100%";
+      panel.style.height = "100dvh";
+      panel.style.borderRadius = "0";
+      panel.style.bottom = "auto";
+      panel.style[side] = "auto";
+    } else {
+      panel.style.inset = "auto";
+      panel.style.bottom = "96px";
+      panel.style[side] = "24px";
+      panel.style.width = "380px";
+      panel.style.height = "min(640px, calc(100dvh - 120px))";
+      panel.style.borderRadius = "16px";
+    }
+
+    if (isOpen) launcher.style.display = "none";
+  }
+
+  function openPanel() {
+    if (!panel || !launcher) return;
+    isOpen = true;
+
+    // Lazy-load: the iframe is created on the first open only.
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "fw-frame-" + slug;
+      iframe.className = "fw-iframe";
+      iframe.setAttribute("title", launcherLabel);
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.style.display = "block";
+      iframe.src = buildIframeUrl();
+      panel.appendChild(iframe);
+    }
+
+    panel.style.display = "block";
+    panel.style.opacity = "1";
+    panel.style.transform = "translateY(0)";
+    launcher.setAttribute("aria-expanded", "true");
+    applyLayout();
+
+    // Move focus into the iframe.
+    try {
+      iframe.focus();
+    } catch {
+      /* focus can be blocked; not fatal */
+    }
+  }
+
+  function closePanel() {
+    if (!panel || !launcher) return;
+    isOpen = false;
+    panel.style.opacity = "0";
+    panel.style.transform = "translateY(12px)";
+    window.setTimeout(function () {
+      if (!isOpen) panel.style.display = "none";
+    }, 180);
+    launcher.setAttribute("aria-expanded", "false");
+    // Always bring the launcher back so the chat can be reopened.
+    launcher.style.display = "inline-flex";
+    // Return focus to the launcher.
+    try {
+      launcher.focus();
+    } catch {
+      /* focus can be blocked; not fatal */
+    }
+  }
+
+  function togglePanel() {
+    if (isOpen) {
+      closePanel();
+    } else {
+      openPanel();
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Load the form config (colour, label, position)
+  // ---------------------------------------------------------------------
+  fetch(appOrigin + "/api/public/forms/" + encodeURIComponent(slug), { method: "GET" })
     .then(function (res) {
       return res.ok ? res.json() : null;
     })
@@ -45,7 +281,7 @@
       if (data) {
         if (data.themeColor) themeColor = data.themeColor;
         if (data.launcherLabel) launcherLabel = data.launcherLabel;
-        if (data.widgetPosition) widgetPosition = data.widgetPosition === "LEFT" ? "LEFT" : "RIGHT";
+        if (data.widgetPosition) widgetPosition = data.widgetPosition;
       }
       // Overrides from data attributes (validated).
       if (dataColor && /^#[0-9a-fA-F]{6}$/.test(dataColor)) themeColor = dataColor;
@@ -54,188 +290,10 @@
       build();
     })
     .catch(function () {
-      // Build with defaults if the API is unreachable.
+      // Build with the defaults so the widget still works.
+      if (dataColor && /^#[0-9a-fA-F]{6}$/.test(dataColor)) themeColor = dataColor;
+      if (dataPosition === "left") widgetPosition = "LEFT";
+      if (dataPosition === "right") widgetPosition = "RIGHT";
       build();
     });
-
-  // ---------------------------------------------------------------------------
-  // Build UI.
-  // ---------------------------------------------------------------------------
-  function build() {
-    var isMobile = window.matchMedia("(max-width: 480px)").matches;
-
-    // Root overlay (hidden by default).
-    var root = document.createElement("div");
-    root.id = rootId;
-    root.className = "fw-root fw-overlay";
-    root.style.position = "fixed";
-    root.style.top = "0";
-    root.style.left = "0";
-    root.style.width = "100%";
-    root.style.height = "100%";
-    root.style.zIndex = "2147483647";
-    root.style.display = "none";
-    root.style.alignItems = "center";
-    root.style.justifyContent = "center";
-    root.style.background = "rgba(0,0,0,0.4)";
-    root.style.backdropFilter = "blur(2px)";
-    root.style.webkitBackdropFilter = "blur(2px)";
-
-    // Close button (×) for the overlay.
-    var closeBtn = document.createElement("button");
-    closeBtn.id = "fw-close-" + slug;
-    closeBtn.className = "fw-close";
-    closeBtn.type = "button";
-    closeBtn.setAttribute("aria-label", "Close chat");
-    closeBtn.style.position = "fixed";
-    closeBtn.style.top = isMobile ? "12px" : "20px";
-    closeBtn.style[widgetPosition === "LEFT" ? "right" : "left"] = isMobile ? "12px" : "20px";
-    closeBtn.style.zIndex = "2147483648";
-    closeBtn.style.width = "36px";
-    closeBtn.style.height = "36px";
-    closeBtn.style.borderRadius = "50%";
-    closeBtn.style.border = "none";
-    closeBtn.style.background = "#ffffff";
-    closeBtn.style.color = "#111827";
-    closeBtn.style.fontSize = "24px";
-    closeBtn.style.lineHeight = "1";
-    closeBtn.style.cursor = "pointer";
-    closeBtn.style.display = "flex";
-    closeBtn.style.alignItems = "center";
-    closeBtn.style.justifyContent = "center";
-    closeBtn.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
-    closeBtn.type = "button";
-    closeBtn.appendChild(document.createTextNode("×"));
-
-    // Iframe.
-    var iframe = document.createElement("iframe");
-    iframe.id = "fw-iframe-" + slug;
-    iframe.className = "fw-iframe";
-    iframe.src = appOrigin + "/embed/" + encodeURIComponent(slug);
-    iframe.style.border = "none";
-    iframe.style.borderRadius = "12px";
-    iframe.style.boxShadow = "0 20px 60px rgba(0,0,0,0.25)";
-    if (isMobile) {
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.borderRadius = "0";
-    } else {
-      iframe.style.width = "420px";
-      iframe.style.height = "90vh";
-      iframe.style.position = widgetPosition === "LEFT" ? "left" : "right";
-      iframe.style.top = "0";
-      iframe.style.bottom = "0";
-    }
-
-    root.appendChild(closeBtn);
-    root.appendChild(iframe);
-    document.body.appendChild(root);
-
-    // ---------------------------------------------------------------------------
-    // Floating launcher button (always visible).
-    // ---------------------------------------------------------------------------
-    var btn = document.createElement("button");
-    btn.id = "fw-btn-" + slug;
-    btn.className = "fw-btn";
-    btn.type = "button";
-    btn.ariaLabel = launcherLabel;
-    btn.style.position = "fixed";
-    btn.style.bottom = "24px";
-    btn.style[widgetPosition] = "24px";
-    btn.style.zIndex = "2147483647";
-    btn.style.width = "56px";
-    btn.style.height = "56px";
-    btn.style.borderRadius = "28px";
-    btn.style.border = "none";
-    btn.style.background = themeColor;
-    btn.style.color = contrastText(themeColor);
-    btn.style.fontSize = "24px";
-    btn.style.lineHeight = "1";
-    btn.style.cursor = "pointer";
-    btn.style.display = "inline-flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-    btn.style.transition = "transform 0.15s ease, opacity 0.15s ease";
-    btn.appendChild(document.createTextNode("💬"));
-
-    btn.addEventListener("mouseenter", function () {
-      btn.style.transform = "scale(1.05)";
-    });
-    btn.addEventListener("mouseleave", function () {
-      btn.style.transform = "scale(1)";
-    });
-    btn.addEventListener("click", function () {
-      root.style.display = "flex";
-      btn.style.display = "none";
-      closeBtn.style.display = "flex";
-      try { btn.focus(); } catch (e) {}
-    });
-
-    document.body.appendChild(btn);
-
-    // ---------------------------------------------------------------------------
-    // Close handlers: Esc key, close button, postMessage fw:close.
-    // ---------------------------------------------------------------------------
-    function closeChat() {
-      root.style.display = "none";
-      btn.style.display = "inline-flex";
-      closeBtn.style.display = "none";
-    }
-
-    closeBtn.addEventListener("click", closeChat);
-
-    document.addEventListener("keydown", function (ev) {
-      if (ev.key === "Escape" && root.style.display === "flex") {
-        closeChat();
-      }
-    });
-
-    window.addEventListener("message", function (ev) {
-      // Verify origin equals the app origin.
-      if (ev.origin !== appOrigin) return;
-      if (ev.data && ev.data.type === "fw:close") {
-        closeChat();
-      }
-    });
-
-    // Recompute mobile/desktop layout on resize.
-    window.addEventListener("resize", function () {
-      var nowMobile = window.matchMedia("(max-width: 480px)").matches;
-      if (nowMobile !== isMobile) {
-        isMobile = nowMobile;
-        closeBtn.style.top = isMobile ? "12px" : "20px";
-        closeBtn.style[widgetPosition === "LEFT" ? "right" : "left"] = isMobile ? "12px" : "20px";
-        if (isMobile) {
-          iframe.style.width = "100%";
-          iframe.style.height = "100%";
-          iframe.style.borderRadius = "0";
-          iframe.style.position = "static";
-        } else {
-          iframe.style.width = "420px";
-          iframe.style.height = "90vh";
-          iframe.style.borderRadius = "12px";
-          iframe.style.position = widgetPosition === "LEFT" ? "left" : "right";
-          iframe.style.top = "0";
-          iframe.style.bottom = "0";
-        }
-      }
-    });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Contrast text color on themeColor (WCAG luminance).
-  // ---------------------------------------------------------------------------
-  function contrastText(hex) {
-    var m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-    if (!m) return "#000000";
-    var r = parseInt(m[1], 16) / 255;
-    var g = parseInt(m[2], 16) / 255;
-    var b = parseInt(m[3], 16) / 255;
-    var lum = (function (c) {
-      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    });
-    var y = 0.2126 * lum(r) + 0.7152 * lum(g) + 0.0722 * lum(b);
-    return y > 0.179 ? "#000000" : "#ffffff";
-  }
 })();

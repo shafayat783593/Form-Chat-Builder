@@ -6,13 +6,17 @@ import {
   MAX_PLACEHOLDER,
   MIN_FONT_SIZE,
   QUESTION_TYPES,
+  optionsSchema,
 } from "@/lib/field-types";
 
 const questionTypeSchema = z.enum(QUESTION_TYPES);
 
 export const createFormSchema = z.object({
-  title: z.string().trim().min(1).max(120),
+  title: z.string().trim().min(1).max(120).optional(),
   templateId: z.string().min(1).optional(),
+}).refine((input) => input.templateId || input.title, {
+  message: "Enter a form title",
+  path: ["title"],
 });
 
 export const updateFormSchema = z.object({
@@ -47,7 +51,7 @@ export const saveFormSchema = z.object({
       id: z.string().optional(),
       type: questionTypeSchema,
       label: z.string().trim().min(1).max(200),
-      options: z.array(z.string().trim().min(1)).optional(),
+      options: optionsSchema.optional(),
       required: z.boolean().default(true),
       prefillKey: z.string().regex(/^[a-z][a-z0-9_]{0,29}$/).optional().nullable(),
       placeholder: z.string().trim().max(MAX_PLACEHOLDER).optional().nullable(),

@@ -1,10 +1,28 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPublishedFormBySlug } from "@/modules/form/form.service";
-import { ClassicForm, type RuntimeForm } from "@/modules/form-runtime/classic-form";
-import { Chat } from "@/modules/chat/chat";
+import { ChatFrame } from "@/modules/chat/chat-frame";
 
-export default async function FormPage({
+export default function FormPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <div className="m-0 min-h-screen bg-[#f8fafc] font-sans antialiased text-slate-900 flex items-center justify-center p-4">
+      <div className="h-[min(720px,calc(100dvh-5rem))] w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Suspense fallback={<div className="h-full w-full animate-pulse bg-white" />}>
+          <FormChat params={params} searchParams={searchParams} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+async function FormChat({
   params,
   searchParams,
 }: {
@@ -19,58 +37,36 @@ export default async function FormPage({
   const form = await getPublishedFormBySlug(slug);
   if (!form) notFound();
 
-  const runtimeForm: RuntimeForm = {
-    slug: form.slug,
-    title: form.title,
-    description: form.description,
-    welcomeText: form.welcomeText,
-    completionText: form.completionText,
-    themeColor: form.themeColor,
-    submitButtonText: form.submitButtonText,
-    displayMode: form.displayMode,
-    showProgress: form.showProgress,
-    multiPageForm: form.multiPageForm,
-    questions: form.questions.map((q) => ({
-      id: q.id,
-      type: q.type,
-      label: q.label,
-      options: q.options,
-      required: q.required,
-      prefillKey: q.prefillKey,
-      placeholder: q.placeholder,
-      textColor: q.textColor,
-      fontSize: q.fontSize,
-      fontWeight: q.fontWeight,
-      fontStyle: q.fontStyle,
-    })),
-  };
-
   return (
-    <div className="m-0 min-h-screen bg-[#f8fafc] font-sans antialiased text-slate-900">
-      <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
-        {form.displayMode === "FOCUS" ? (
-          // Focus mode: the same chat the visitor sees in the widget.
-          <div className="rounded-xl border border-slate-200 bg-white p-0 shadow-sm overflow-hidden">
-            <Chat form={runtimeForm} searchParams={query} />
-          </div>
-        ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
-            <h1
-              className="text-3xl font-bold tracking-tight"
-              style={{ color: form.themeColor }}
-            >
-              {form.title}
-            </h1>
-            {form.description ? (
-              <p className="mt-1.5 text-sm text-slate-500">{form.description}</p>
-            ) : null}
-
-            <div className="mt-8">
-              <ClassicForm form={runtimeForm} live searchParams={query} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    <ChatFrame
+      form={{
+        slug: form.slug,
+        title: form.title,
+        description: form.description,
+        welcomeText: form.welcomeText,
+        completionText: form.completionText,
+        themeColor: form.themeColor,
+        submitButtonText: form.submitButtonText,
+        displayMode: form.displayMode,
+        showProgress: form.showProgress,
+        multiPageForm: form.multiPageForm,
+        questions: form.questions.map((q) => ({
+          id: q.id,
+          type: q.type,
+          label: q.label,
+          options: q.options,
+          required: q.required,
+          prefillKey: q.prefillKey,
+          placeholder: q.placeholder,
+          textColor: q.textColor,
+          fontSize: q.fontSize,
+          fontWeight: q.fontWeight,
+          fontStyle: q.fontStyle,
+        })),
+      }}
+      searchParams={query}
+      closeMode="local"
+      hideClose={false}
+    />
   );
 }

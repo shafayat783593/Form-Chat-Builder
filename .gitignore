@@ -44,3 +44,30 @@ next-env.d.ts
 
 # ad-hoc dev artifacts
 cookies.txt
+
+# local editor and agent settings
+.vscode/
+.idea/
+.codex/
+.agents/
+
+# local databases and temporary files
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.temp
+tmp/
+
+# browser and test-run artifacts
+playwright-report/
+test-results/
+screenshots/
+
+
+/test-site
+/scripts
+/docs
+/dose
+.AGENTS.md
+.mkform.ts

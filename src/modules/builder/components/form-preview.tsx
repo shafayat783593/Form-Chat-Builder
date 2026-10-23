@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Monitor, Tablet, Smartphone, ArrowLeft } from "lucide-react";
-import { ClassicForm, type RuntimeForm } from "@/modules/form-runtime/classic-form";
-import { Chat } from "@/modules/chat/chat";
+import { ChatFrame } from "@/modules/chat/chat-frame";
 import { cn } from "@/lib/utils";
+import type { RuntimeQuestion } from "@/modules/form-runtime/classic-form";
 
 type Device = "desktop" | "tablet" | "mobile";
 
@@ -24,7 +24,7 @@ export interface PreviewFormData {
   displayMode: "CLASSIC" | "FOCUS";
   showProgress: boolean;
   multiPageForm: boolean;
-  questions: RuntimeForm["questions"];
+  questions: RuntimeQuestion[];
 }
 
 interface FormPreviewProps {
@@ -44,20 +44,6 @@ export function FormPreview({
 }: FormPreviewProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const active = DEVICES.find((d) => d.id === device)!;
-
-  const runtimeForm: RuntimeForm = {
-    slug: "preview",
-    title: form.title,
-    description: form.description,
-    welcomeText: form.welcomeText,
-    completionText: form.completionText,
-    themeColor: form.themeColor,
-    submitButtonText: form.submitButtonText,
-    displayMode: form.displayMode,
-    showProgress: form.showProgress,
-    multiPageForm: form.multiPageForm,
-    questions: form.questions,
-  };
 
   return (
     <div className="min-h-svh bg-muted/30">
@@ -137,14 +123,37 @@ export function FormPreview({
           ) : null}
 
           <div className="mt-8">
-            {form.displayMode === "FOCUS" ? (
-              // Focus mode renders the same chat the visitor sees, but nothing is sent.
-              <div className="-mx-6 -mt-8 sm:-mx-10 sm:-mt-10">
-                <Chat form={runtimeForm} previewMode />
-              </div>
-            ) : (
-              <ClassicForm form={runtimeForm} live={false} />
-            )}
+            <div className="h-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <ChatFrame
+                form={{
+                  slug: "preview",
+                  title: form.title,
+                  description: form.description,
+                  welcomeText: form.welcomeText,
+                  completionText: form.completionText,
+                  themeColor: form.themeColor,
+                  submitButtonText: form.submitButtonText,
+                  displayMode: form.displayMode,
+                  showProgress: form.showProgress,
+                  multiPageForm: form.multiPageForm,
+                  questions: form.questions.map((q) => ({
+                    id: q.id,
+                    type: q.type,
+                    label: q.label,
+                    options: q.options,
+                    required: q.required,
+                    prefillKey: q.prefillKey,
+                    placeholder: q.placeholder,
+                    textColor: q.textColor,
+                    fontSize: q.fontSize,
+                    fontWeight: q.fontWeight,
+                    fontStyle: q.fontStyle,
+                  })),
+                }}
+                previewMode
+                hideClose
+              />
+            </div>
           </div>
         </div>
       </div>

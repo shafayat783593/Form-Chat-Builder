@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DashboardSidebar } from "./dashboard-sidebar";
 import type { UserRole } from "./types";
+import { useGetLoggedInUser } from "@/hooks/use-get-logged-in-user";
 
 function Breadcrumbs({ pathname }: { pathname: string }) {
   const segments = pathname.split("/").filter(Boolean);
@@ -51,11 +52,12 @@ function Breadcrumbs({ pathname }: { pathname: string }) {
 export interface DashboardShellProps {
   children: React.ReactNode;
   role: UserRole;
-  userName: string;
 }
 
-export function DashboardShell({ children, role, userName }: DashboardShellProps) {
+export function DashboardShell({ children, role }: DashboardShellProps) {
   const pathname = usePathname();
+  const { user } = useGetLoggedInUser();
+  const userName = user?.name ?? "Account";
 
   return (
     <SidebarProvider>

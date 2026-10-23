@@ -33,7 +33,7 @@ export async function notifyOnResponse(args: NotifyArgs): Promise<void> {
     "Answers:",
     ...answers.map((a) => `  • ${a.label}: ${a.value}`),
     "",
-    `View all responses: ${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/forms`,
+    `View all responses: ${process.env.NEXT_PUBLIC_APP_URL ?? ""}/owner/forms`,
   ].join("\n");
 
   const html = `
@@ -53,7 +53,7 @@ export async function notifyOnResponse(args: NotifyArgs): Promise<void> {
           .join("")}
       </table>
       <p style="margin-top:24px">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard" style="color:#4f46e5">View in dashboard</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ""}/owner" style="color:#4f46e5">View in dashboard</a>
       </p>
     </div>
   `;

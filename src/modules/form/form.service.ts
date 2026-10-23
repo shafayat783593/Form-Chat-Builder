@@ -25,7 +25,7 @@ export async function createForm(ownerId: string, input: CreateFormInput) {
       const form = await tx.form.create({
         data: {
           ownerId,
-          title: input.title,
+          title: input.title ?? template.title,
           slug,
           isTemplate: false,
           status: "DRAFT",
@@ -55,8 +55,54 @@ export async function createForm(ownerId: string, input: CreateFormInput) {
   }
 
   return prisma.form.create({
-    data: { ownerId, title: input.title, slug },
+    data: { ownerId, title: input.title!, slug },
     select: { id: true, slug: true },
+  });
+}
+
+/** Creates a draft copy of one of the user's forms without copying responses. */
+export async function duplicateForm(ownerId: string, formId: string) {
+  const source = await prisma.form.findFirst({
+    where: { id: formId, ownerId, isTemplate: false },
+    include: { questions: { orderBy: { order: "asc" } } },
+  });
+  if (!source) throw new AppError(404, "Form not found");
+
+  return prisma.form.create({
+    data: {
+      ownerId,
+      title: `Copy of ${source.title}`.slice(0, 120),
+      slug: await generateFormSlug(),
+      status: "DRAFT",
+      description: source.description,
+      welcomeText: source.welcomeText,
+      completionText: source.completionText,
+      themeColor: source.themeColor,
+      launcherLabel: source.launcherLabel,
+      widgetPosition: source.widgetPosition,
+      submitButtonText: source.submitButtonText,
+      displayMode: source.displayMode,
+      showProgress: source.showProgress,
+      multiPageForm: source.multiPageForm,
+      notifyOnResponse: source.notifyOnResponse,
+      notifyEmails: source.notifyEmails,
+      questions: {
+        create: source.questions.map((question) => ({
+          type: question.type,
+          label: question.label,
+          options: question.options === null ? undefined : question.options as unknown as Prisma.InputJsonValue,
+          required: question.required,
+          order: question.order,
+          prefillKey: question.prefillKey,
+          placeholder: question.placeholder,
+          textColor: question.textColor,
+          fontSize: question.fontSize,
+          fontWeight: question.fontWeight,
+          fontStyle: question.fontStyle,
+        })),
+      },
+    },
+    select: { id: true },
   });
 }
 

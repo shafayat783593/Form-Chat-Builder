@@ -1,3 +1,5 @@
+// UNUSED: the visitor experience is chat-only (see modules/chat). This file is
+// kept for reference and for a future multi-page form mode; nothing renders it.
 "use client";
 
 import { useState } from "react";

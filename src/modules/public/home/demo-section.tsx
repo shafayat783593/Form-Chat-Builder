@@ -14,8 +14,7 @@ export function DemoSection() {
     script.setAttribute("data-form", slug);
     document.body.appendChild(script);
 
-    // widget.js React-এর বাইরে DOM-এ বসে, তাই পেজ ছাড়লে নিজেই সরাতে হবে,
-    // নইলে /dashboard-এও ডেমো বাবল থেকে যাবে
+   
     return () => {
       script.remove();
       document.getElementById(`fw-root-${slug}`)?.remove();

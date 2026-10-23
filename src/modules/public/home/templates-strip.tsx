@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { listPublishedTemplates } from "@/modules/template/template.service";
 
 export async function TemplatesStrip() {
+  await connection();
   const templates = await listPublishedTemplates();
   const shown = templates.slice(0, 6);
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
+import { Copyright } from "./copyright";
 
 export function Footer() {
   return (
@@ -90,7 +91,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t pt-6 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} FormChat. All rights reserved.
+          <Copyright />
         </div>
       </div>
     </footer>

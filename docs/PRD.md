@@ -36,6 +36,9 @@ AI features, payments/billing/subscriptions, workspaces/team invites, OAuth, ema
 | Save model | Explicit **Save** button (single `saveFormAction`), not per-keystroke autosave. |
 | Reordering | Move up / Move down buttons first; drag-and-drop (`@dnd-kit`) only after the core builder ships — it is scheduled in **Phase 4 (T16)**, not Phase 2. |
 | Product surface vs. reference | The reference site is a UI reference only. Do not copy its branding, copy, assets, routes, or pricing language. |
+| Visitor UI | **Chat only.** `/embed/{slug}`, `/f/{slug}` and the builder preview all render the same `Chat` (see §8). `Form.displayMode` is **ignored at runtime** and its toggle is hidden in the builder; the DB column and the types stay until a later migration drops them. |
+| Chat transport | No websockets, no per-answer API calls. Everything runs in the browser; **one** `POST` at the end. Partial responses are out of scope. |
+| Options | An option may not contain a comma (`,`) — multi-select answers are stored comma-joined, so a comma would corrupt the answer. Rejected in the schema and in the options editor. |
 
 ### 1.4 What exists today (verified 2026-10-20)
 
@@ -50,7 +53,7 @@ AI features, payments/billing/subscriptions, workspaces/team invites, OAuth, ema
 | Schema | `User` (with `role`), `Form`, `Question`, `Response`, `Answer` + `Role`, `FormStatus`, `QuestionType`, `WidgetPosition` enums; migrations `20261018175311_init`, `20261020120000_add_roles_templates`, `20261020130000_welcome_text_default`. |
 | Roles | `Role` enum + `User.role` + `requireAdmin()`/`requireAdminPage()`; `scripts/make-admin.ts`; `/admin/*` guarded (non-admin → `notFound()`); dashboard reads the real role from the session. |
 | Builder | `/dashboard/forms/[id]/edit` — 3 panels (palette / canvas / settings tabs), move up-down, duplicate, delete, options editor, Save + Publish, preview sheet, dirty tracking, optimistic concurrency (409). |
-| Chat + embed | `modules/chat` (shared by `/f/[slug]`, `/embed/[slug]`), one question at a time, POST once, 422 → jump back, `public/widget.js` (idempotent, `fw-` prefixed, Esc + `fw:close`). |
+| Chat + embed | `modules/chat` — **chat-only** visitor UI shared by `/embed/[slug]`, `/f/[slug]` and the builder preview: real transcript, typing indicator, working Skip (incl. on the last question), one POST at the end, 422 → back to the failing question, 429 with a Retry countdown, fixed light palette. `public/widget.js` — bottom-corner panel, lazy iframe, `data-color` / `data-position` / `data-prefill`. |
 | Templates | `modules/template` (service + actions + schema), admin CRUD, publish gate (≥ 1 question), copies keep working after delete (`sourceTemplateId → null`), public `/templates/[slug]` preview + "Use this template". |
 | Headers | `next.config.ts` sends `Access-Control-Allow-Origin: *` on `/api/public/*` and `Content-Security-Policy: frame-ancestors *` on `/embed/*`. |
 | Marketing page | Hero, Features, How it works, Demo section. |
@@ -277,14 +280,19 @@ src/
 │  ├─ auth/  form/  question/  response/                 # exist (services + actions + Zod)
 │  ├─ template/   {template.service.ts, template.actions.ts, template.schema.ts, create-template-dialog.tsx, templates-table.tsx, use-template-button.tsx}  # exist
 │  ├─ builder/                                           # exists (T8)
-│  ├─ chat/                                              # exists (T4) — chat.tsx, close-bar.tsx
-│  └─ public/home/{hero,features,how-it-works,demo-section}.tsx  # exist
-│     └─ {templates-strip,faq,cta}.tsx                   # NOT built (T12)
-├─ lib/{prisma,auth,auth-client,session,roles,errors,api,action,limits,slug,utils}.ts  # exist
-│  └─ rate-limit.ts                                      # NOT built (T14)
+│  │  ├─ components/{builder-shell, top-bar, field-palette, question-canvas, question-card,
+│  │  │        options-editor, settings-panel, form-preview, share-dialog, live-banner, tabs/*}
+│  │  ├─ field-meta.ts                                   # labels + icons per field type
+│  │  └─ use-builder-state.ts                            # useReducer + dirty tracking
+│  ├─ chat/                                              # exists (T4) — chat-only visitor UI
+│  │  ├─ flow.ts  use-form-flow.ts  field-input.tsx
+│  │  ├─ chat.tsx  chat-frame.tsx  chat-theme.ts  close-bar.tsx
+│  ├─ form-runtime/                                      # classic-form.tsx is UNUSED (chat-only)
+│  └─ public/home/{hero,features,how-it-works,templates-strip,demo-section,faq,cta}.tsx
+├─ lib/{prisma,auth,auth-client,session,roles,errors,api,action,limits,rate-limit,slug,field-types,notify,utils}.ts  # exist
 public/widget.js                                         # exists (T5)
-test-site/index.html                                     # NOT built (T5)
-scripts/make-admin.ts                                    # NEW — exists (roles system)
+test-site/index.html                                     # exists (T5)
+scripts/{make-admin.ts,test-flow.ts}                      # make-admin + flow tests
 prisma/{schema.prisma, seed.ts, migrations/}             # exist
 ```
 
@@ -421,23 +429,48 @@ async headers() {
 ```html
 <script src="{NEXT_PUBLIC_APP_URL}/widget.js" data-form="{slug}"></script>
 ```
-Optional attributes: `data-color` (overrides `themeColor`), `data-position` (`left|right`, overrides the form's `widgetPosition`). Phase 3: `data-prefill='{"email":"a@b.com"}'`.
+Optional attributes: `data-color` (overrides `themeColor`, must match `^#[0-9a-fA-F]{6}$`), `data-position` (`left|right`, overrides the form's `widgetPosition`), `data-prefill='{"email":"a@b.com"}'` (JSON object of string values, max 20 keys; it can never override `src` or `color`).
 
-`public/widget.js` requirements: plain JS, no dependencies, idempotent (a second include does nothing), fetches the public API for `themeColor`/`launcherLabel`/`widgetPosition`, renders a floating button (z-index high, `aria-label`, keyboard-focusable), opens an iframe to `/embed/{slug}`, fullscreen at ≤ 480px, closes on Esc and on `postMessage {type:"fw:close"}` (verify `event.origin` equals the app origin), never touches host-page styles outside its own elements (prefix every class/id with `fw-`).
+`public/widget.js` requirements: plain JS, no dependencies, idempotent (a second include does nothing), fetches the public API for `themeColor`/`launcherLabel`/`widgetPosition` and falls back to the defaults if the fetch fails.
+- **Desktop (> 480px):** no full-screen dark overlay. The panel is fixed to the bottom corner chosen by `widgetPosition`/`data-position` (`bottom: 96px`, side `24px`, `width: 380px`, `height: min(640px, calc(100dvh - 120px))`, `border-radius: 16px`, box-shadow). The launcher stays in the corner; clicking it toggles the panel.
+- **Mobile (≤ 480px):** the panel is fullscreen (`inset: 0`, `100%` wide, `100dvh` tall, no radius) and the launcher is hidden while the panel is open.
+- **Lazy-load:** the iframe is created on the first open only. Its URL is `{appOrigin}/embed/{slug}?src={encodeURIComponent(location.origin)}` plus `&color=` when `data-color` is a valid hex.
+- **Closing:** the iframe's own close button posts `{type:"fw:close"}` (the widget verifies `ev.origin === appOrigin`); the widget also closes on Escape. There is no second close button in the widget.
+- **Accessibility:** the launcher uses `setAttribute("aria-label", launcherLabel)` and `aria-expanded`; the panel is `role="dialog"` with an `aria-label`. Focus moves into the iframe on open and returns to the launcher on close.
+- Every class and id is prefixed with `fw-`; the widget never touches host-page styles.
 
 ---
 
 ## 8. Chat experience (`modules/chat`, shared by `/embed`, `/f`, builder preview)
 
-- Flow: welcome bubble → Q1 → … → completion. **One question at a time.** Visitor answers appear as right-aligned bubbles; a short typing indicator before each bot message (≤ 600 ms, respect `prefers-reduced-motion`).
-- Inputs: TEXT/EMAIL = text input + Send. CHOICE/YES_NO = buttons. Optional questions get **Skip**. Enter sends; Shift+Enter is not needed (single-line).
-- Client validation mirrors the server: required non-empty, email format, ≤ 2000 chars. Error shown inline under the input; same question stays active; focus returns to the input.
-- Finish: POST once, disable inputs, no double submit. `422` → map `details` to the question and jump back to it. Network error → "Retry" button with answers kept in memory. Success → show `completionText`, no further input.
-- `previewMode` prop: identical UI, but never calls the API; shows a "Preview — responses are not saved" strip.
-- Theme: `themeColor` via a CSS variable; text color on it chosen by contrast (WCAG luminance). **Do not use dashboard theme tokens** (`bg-background` etc.) in embed/public chat pages — visitor OS dark mode must not alter the widget. Fixed light palette + `themeColor`.
-- Mobile: `100dvh`, input pinned bottom, input font-size ≥ 16px (prevents iOS zoom), auto-scroll to latest message, message list has `aria-live="polite"`, visible focus rings.
-- `/embed/[slug]`: no site chrome, transparent/clean background, close button → `window.parent.postMessage({type:"fw:close"}, "*")` (no data inside). `/f/[slug]`: same chat centered on a plain page. Both call `notFound()` for missing/unpublished/template forms. Must work with **no cookies / no login**.
-- Prefill (Phase 3): for questions with `prefillKey`, if a query param with that key exists, pre-answer it **after running the same validation**; invalid prefills are ignored (question is asked normally).
+The visitor always talks to a **chat**: one question at a time, answers stay in
+the transcript, and a single `POST` is sent when the last question is answered.
+
+### 8.1 Architecture
+```
+src/modules/chat/
+├─ flow.ts            # PURE logic (no React): state, reducer, selectors, transcript builder
+├─ use-form-flow.ts   # React hook: wraps flow.ts + submit / network logic
+├─ field-input.tsx    # ONE component rendering the input for every QuestionType
+├─ chat.tsx           # presentation only (message list + footer)
+├─ chat-frame.tsx     # header (avatar, title, optional close) + <Chat/>; used by embed, /f, preview
+├─ chat-theme.ts      # fixed light PALETTE + contrastTextColor()
+└─ close-bar.tsx      # posts {type:"fw:close"} to the parent
+```
+
+### 8.2 Behaviour
+- **Transcript, not a single question.** `buildTranscript()` returns, in order: the bot welcome bubble, then for every answered question the bot question and the visitor answer (a skipped question shows a muted italic "Skipped"), then the current question.
+- **Flow:** on mount the welcome bubble is shown; after `TYPING_DELAY_MS` (500, `0` when `prefers-reduced-motion`) the first question appears. Between questions a typing indicator is shown for the same delay. There is **no "Start" button / intro screen**.
+- **Typing indicator** appears before every bot message and respects `prefers-reduced-motion`.
+- **Inputs:** `TEXT/EMAIL/NUMBER/PHONE/DATE/ADDRESS/FULL_NAME` = text input (Enter submits); `TEXTAREA` = textarea (Enter submits, Shift+Enter adds a newline); `YES_NO`/`RADIO` = buttons that answer **and advance immediately**; `CHOICE` = select + Send; `CHECKBOX` = checkboxes + Send; `RATING`/`RANGE`/`NPS` = control + Send (no auto-advance, to avoid mis-clicks).
+- **Skip** is offered for **every optional question**, whatever its type. Skipping the **last** question submits the form.
+- **Client validation** mirrors the server: required non-empty, type rules, ≤ 2000 characters. The error is shown inline under the input, the same question stays active and focus returns to the input.
+- **Finish:** one `POST /api/public/forms/{slug}/responses` with the non-empty answers and `sourceUrl` (embed only). `201` → the completion bubble with `completionText`. `422` → the visitor is taken back to the first failing question. `429` → the rate-limit message with a Retry button that is disabled during the countdown. A network error → "Network error" with a Retry button; the answers stay in memory.
+- **previewMode:** identical UI, never calls the API, and shows a "Preview — responses are not saved" strip.
+- **Theme:** `themeColor` is the only variable colour; the text colour on it is chosen with the WCAG luminance rule. The chat uses the fixed light `PALETTE` from `chat-theme.ts` and **never** the dashboard theme tokens, so a visitor in dark mode still sees a correct widget.
+- **Mobile:** the height comes from the parent (`100dvh` on `/embed`), the input bar is pinned to the bottom, inputs are ≥ 16px (no iOS zoom), the list auto-scrolls, `role="log"` + `aria-live="polite"`, and every control has a visible focus ring.
+- **`/embed/{slug}`:** no site chrome, `h-dvh`, a close button that posts `{type:"fw:close"}`, and the query params `src` (origin hint) and `color` (only when it matches `^#[0-9a-fA-F]{6}$`). **`/f/{slug]`:** the same chat centred on a plain page, no close button. Both call `notFound()` for a missing, unpublished or template form and work with **no cookies / no login**.
+- **Prefill:** a question with a `prefillKey` is pre-answered from the matching query parameter. The value still has to pass the normal validation; an invalid prefill is ignored and the question is asked normally.
 
 ---
 
@@ -474,6 +507,7 @@ Gallery of published templates (search/filter by category is optional). Detail p
 - `/dashboard/forms/[id]/responses`: table — submitted-at, one column per question (truncate long values, tooltip full), source origin; 20 per page; empty state ("No responses yet — embed your form"); row → detail; delete with confirm.
 - `/dashboard/forms/[id]/responses/[responseId]`: all answers in question order + timestamp. Another user's id → 404.
 - Format dates with explicit locale and `timeZone` to avoid hydration mismatches.
+- `sourceUrl` is populated when the visitor answers through the **embed** (the widget sends the host page origin). `/f/{slug}` and the builder preview never send it.
 
 ### 9.6 Admin `/admin/templates`
 Guarded by `requireAdminPage()`; non-admins get `notFound()`. See 6.5.

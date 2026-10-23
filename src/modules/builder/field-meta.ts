@@ -22,9 +22,7 @@ export interface FieldTypeMeta {
   type: QuestionType;
   label: string;
   icon: LucideIcon;
-  /** Placeholder used for the input preview and the chat input. */
   placeholder: string;
-  /** Whether the answer is a free text, a single choice or a multi choice. */
   kind: "text" | "choice" | "multi" | "scale";
 }
 

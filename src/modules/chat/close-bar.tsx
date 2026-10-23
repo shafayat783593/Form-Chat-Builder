@@ -1,27 +1,43 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect } from "react";
 
-export function CloseBar() {
-  useEffect(() => {
-    function onClose() {
+interface CloseBarProps {
+  /**
+   * When provided it is called instead of posting `fw:close` to the host page.
+   * The host page uses it to collapse the chat into a launcher.
+   */
+  onClose?: () => void;
+  className?: string;
+}
+
+/**
+ * The close control of the chat frame.
+ *
+ * In the embed the chat lives in an iframe, so closing tells the host page
+ * (the widget) to close its panel by posting `{type:"fw:close"}`.
+ */
+export function CloseBar({ onClose, className }: CloseBarProps) {
+  function close() {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    try {
       window.parent.postMessage({ type: "fw:close" }, "*");
+    } catch {
+      // A cross-origin parent can throw; the close is best-effort.
     }
-    function onEsc(ev: KeyboardEvent) {
-      if (ev.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onEsc);
-    return () => document.removeEventListener("keydown", onEsc);
-  }, []);
+  }
 
   return (
     <button
       type="button"
-      onClick={() => {
-        window.parent.postMessage({ type: "fw:close" }, "*");
-      }}
-      className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+      onClick={close}
+      className={
+        className ??
+        "grid size-8 shrink-0 place-items-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+      }
       aria-label="Close chat"
     >
       <X className="size-5" />
@@ -29,4 +45,3 @@ export function CloseBar() {
     </button>
   );
 }
-

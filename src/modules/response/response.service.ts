@@ -18,15 +18,7 @@ export async function submitResponse(slug: string, input: SubmitResponseInput) {
       title: true,
       notifyOnResponse: true,
       notifyEmails: true,
-      questions: {
-        select: {
-          id: true,
-          type: true,
-          label: true,
-          options: true,
-          required: true,
-        },
-      },
+      questions: true
     },
   });
 
@@ -135,8 +127,15 @@ export async function listResponsesForOwner(formId: string, ownerId: string, pag
   if (!form) throw new AppError(404, "Form not found");
 
   const safePage = Math.max(1, Math.floor(page) || 1);
-  const [total, rows] = await Promise.all([
+  const last7Days = new Date();
+  last7Days.setDate(last7Days.getDate() - 7);
+  const last30Days = new Date();
+  last30Days.setDate(last30Days.getDate() - 30);
+
+  const [total, last7DaysTotal, last30DaysTotal, rows] = await Promise.all([
     prisma.response.count({ where: { formId } }),
+    prisma.response.count({ where: { formId, createdAt: { gte: last7Days } } }),
+    prisma.response.count({ where: { formId, createdAt: { gte: last30Days } } }),
     prisma.response.findMany({
       where: { formId },
       orderBy: { createdAt: "desc" },
@@ -153,7 +152,11 @@ export async function listResponsesForOwner(formId: string, ownerId: string, pag
   return {
     form: { id: form.id, title: form.title, slug: form.slug },
     questions: form.questions,
-    total, page: safePage, pageSize: PAGE_SIZE,
+    total,
+    last7DaysTotal,
+    last30DaysTotal,
+    page: safePage,
+    pageSize: PAGE_SIZE,
     responses: rows.map((r) => ({
       id: r.id,
       createdAt: r.createdAt,

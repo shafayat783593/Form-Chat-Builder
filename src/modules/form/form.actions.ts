@@ -10,7 +10,20 @@ export async function createFormAction(input: unknown) {
   return run(async () => {
     const user = await requireUser();
     const form = await formService.createForm(user.id, createFormSchema.parse(input));
-    revalidatePath("/dashboard");
+    revalidatePath("/owner");
+    revalidatePath("/admin/forms");
+    revalidatePath("/admin/responses");
+    return form;
+  });
+}
+
+export async function duplicateFormAction(formId: string) {
+  return run(async () => {
+    const user = await requireUser();
+    const form = await formService.duplicateForm(user.id, formId);
+    revalidatePath("/owner");
+    revalidatePath("/owner/forms");
+    revalidatePath("/admin/forms");
     return form;
   });
 }
@@ -19,7 +32,9 @@ export async function updateFormAction(id: string, input: unknown){
   return run(async () => {
     const user = await requireUser();
     await formService.updateForm(id, user.id, updateFormSchema.parse(input));
-    revalidatePath("/dashboard");
+    revalidatePath("/owner");
+    revalidatePath("/admin/forms");
+    revalidatePath("/admin/responses");
   });
 }
 
@@ -27,7 +42,9 @@ export async function deleteFormAction(id: string) {
   return run(async () => {
     const user = await requireUser();
     await formService.deleteForm(id, user.id);
-    revalidatePath("/dashboard");
+    revalidatePath("/owner");
+    revalidatePath("/admin/forms");
+    revalidatePath("/admin/responses");
   });
 }
 
@@ -35,7 +52,9 @@ export async function setFormStatusAction(id: string, status: "DRAFT" | "PUBLISH
   return run(async () => {
     const user = await requireUser();
     await formService.setFormStatus(id, user.id, status);
-    revalidatePath("/dashboard");
+    revalidatePath("/owner");
+    revalidatePath("/admin/forms");
+    revalidatePath("/admin/responses");
   });
 }
 
@@ -44,8 +63,10 @@ export async function saveFormAction(input: unknown, isTemplate = false) {
     const user = await requireUser();
     const parsed = saveFormSchema.parse(input);
     const result = await formService.saveForm(parsed, user.id, isTemplate);
-    revalidatePath("/dashboard");
-    revalidatePath(`/dashboard/forms/${result.form.id}/edit`);
+    revalidatePath("/owner");
+    revalidatePath("/admin/forms");
+    revalidatePath("/admin/responses");
+    revalidatePath(`/owner/forms/${result.form.id}/edit`);
     revalidatePath("/admin/templates");
     return result;
   });

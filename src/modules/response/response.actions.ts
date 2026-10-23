@@ -10,7 +10,7 @@ export async function deleteResponseAction(id: string) {
   return run(async () => {
     const user = await requireUser();
     const { formId } = await deleteResponse(z.string().min(1).parse(id), user.id);
-    revalidatePath(`/dashboard/forms/${formId}/responses`);
-    revalidatePath("/dashboard");
+    revalidatePath(`/owner/forms/${formId}/responses`);
+    revalidatePath("/owner");
   });
 }

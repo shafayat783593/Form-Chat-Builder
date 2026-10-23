@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteFormAction, setFormStatusAction } from "../form.actions";
-import { ExternalLink, Loader2, Trash2, Copy } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { deleteFormAction, duplicateFormAction, setFormStatusAction } from "../form.actions";
+import { createTemplateFromFormAction } from "@/modules/template/template.actions";
+import { ExternalLink, FileStack, Loader2, Trash2, Copy } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -14,9 +16,12 @@ type Props = {
     responses: number;
     questions: number;
   };
+  formPathPrefix?: string;
+  allowTemplateCreation?: boolean;
 };
 
-export function FormRow({ form }: Props) {
+export function FormRow({ form, formPathPrefix = "/owner/forms", allowTemplateCreation = false }: Props) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
@@ -36,6 +41,24 @@ export function FormRow({ form }: Props) {
     startTransition(async () => {
       const res = await deleteFormAction(form.id);
       if (!res.ok) setError(res.error);
+    });
+  }
+
+  function createTemplate() {
+    setError(null);
+    startTransition(async () => {
+      const res = await createTemplateFromFormAction(form.id);
+      if (!res.ok) return setError(res.error);
+      router.push(`/admin/templates/${res.data.id}/edit`);
+    });
+  }
+
+  function duplicate() {
+    setError(null);
+    startTransition(async () => {
+      const res = await duplicateFormAction(form.id);
+      if (!res.ok) return setError(res.error);
+      router.push(`${formPathPrefix}/${res.data.id}/edit`);
     });
   }
 
@@ -65,31 +88,43 @@ export function FormRow({ form }: Props) {
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={`/dashboard/forms/${form.id}/edit`}
+            href={`${formPathPrefix}/${form.id}/edit`}
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <ExternalLink className="size-3.5" />
             Edit
           </Link>
 
+          <button type="button" onClick={duplicate} disabled={pending} className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60">
+            <Copy className="size-3.5" />
+            Duplicate
+          </button>
+
+          {allowTemplateCreation ? (
+            <button type="button" onClick={createTemplate} disabled={pending} className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60">
+              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <FileStack className="size-3.5" />}
+              Create template
+            </button>
+          ) : null}
+
           <Link
-            href={`/dashboard/forms/${form.id}/responses`}
+            href={`${formPathPrefix}/${form.id}/responses`}
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <ExternalLink className="size-3.5" />
             Responses
           </Link>
 
-          {published ? (
-            <button
-              type="button"
-              onClick={copyLink}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <Copy className="size-3.5" />
-              {copied ? "Copied" : "Copy link"}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={copyLink}
+            disabled={!published}
+            title={published ? "Copy the public form link" : "Publish the form before sharing its public link"}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Copy className="size-3.5" />
+            {copied ? "Copied" : "Copy link"}
+          </button>
 
           <button
             type="button"

@@ -1,21 +1,7 @@
-/**
- * Single source of truth for every question type: which one exists, how it is
- * rendered in the builder, and how it is validated on the server.
- *
- * The builder palette, the save validation and the public chat all read from
- * here so a new type only has to be added once.
- */
 
-export const QUESTION_TYPES = [
-  "TEXT",
-  "TEXTAREA",
-  "EMAIL",
-  "NUMBER",
-  "PHONE",
-  "DATE",
-  "CHOICE",
-  "RADIO",
-  "CHECKBOX",
+import { z } from "zod";
+
+export const QUESTION_TYPES = ["TEXT", "TEXTAREA", "EMAIL","NUMBER","PHONE","DATE","CHOICE","RADIO","CHECKBOX",
   "YES_NO",
   "RATING",
   "RANGE",
@@ -25,6 +11,7 @@ export const QUESTION_TYPES = [
 ] as const;
 
 export type QuestionType = (typeof QUESTION_TYPES)[number];
+
 
 /** Types that need a list of options. */
 export const OPTION_TYPES: QuestionType[] = ["CHOICE", "RADIO", "CHECKBOX"];
@@ -46,6 +33,32 @@ export function isMultiSelect(type: QuestionType): boolean {
 
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 10;
+
+/**
+ * Multi-select answers are stored as a comma-joined string, so an option may
+ * not contain a comma - otherwise the stored answer cannot be split back into
+ * the original options.
+ */
+export const OPTION_FORBIDDEN_CHAR = ",";
+
+export function hasForbiddenOptionChar(options: string[]): boolean {
+  return options.some((o) => o.includes(OPTION_FORBIDDEN_CHAR));
+}
+
+/**
+ * Shared zod schema for a question's options. Used by every write path
+ * (add/update question and the builder save) so a comma can never reach the
+ * database.
+ */
+export const optionsSchema = z
+  .array(z.string().trim().min(1).max(100))
+  .min(2)
+  .max(10)
+  .refine((o) => new Set(o).size === o.length, "Options must be unique")
+  .refine(
+    (o) => !o.some((opt) => opt.includes(OPTION_FORBIDDEN_CHAR)),
+    "Options cannot contain commas",
+  );
 
 /** RATING: 1..5 stars. */
 export const RATING_MIN = 1;

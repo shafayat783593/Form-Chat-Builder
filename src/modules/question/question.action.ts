@@ -8,7 +8,7 @@ import { addQuestionSchema, updateQuestionSchema, reorderSchema } from "./questi
 import * as questionService from "./question.service";
 
 const idSchema = z.string().min(1);
-const editPath = (formId: string) => `/dashboard/forms/${formId}/edit`;
+const editPath = (formId: string) => `/owner/forms/${formId}/edit`;
 
 export async function addQuestionAction(formId: string, input: unknown) {
   return run(async () => {

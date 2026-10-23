@@ -6,10 +6,7 @@ export const MAX_BODY_BYTES = 32 * 1024;
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 
-/**
- * Wraps a route handler and turns thrown errors into clean JSON responses:
- * `AppError` -> its status, `ZodError` -> 400, anything else -> 500.
- */
+// error handeler
 export function withErrorHandler<C>(handler: Handler<C>): Handler<C> {
   return async (req, ctx) => {
     try {
@@ -27,9 +24,7 @@ export function withErrorHandler<C>(handler: Handler<C>): Handler<C> {
 
 /**
  * Reads and parses a JSON request body.
- *
- * Rejects oversized bodies (400) and malformed JSON (400) instead of letting
- * them surface as a 500.
+
  */
 export async function readJson(req: Request, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
   const declaredLength = Number(req.headers.get("content-length") ?? "0");

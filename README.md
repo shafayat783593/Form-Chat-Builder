@@ -16,8 +16,8 @@ builder.
 - 15 question types: Text, Textarea, Email, Number, Phone, Date, Dropdown, Radio, Checkbox, Yes/No, Rating, Range, NPS, Address, Full Name.
 - Per-field styling: label, placeholder, text colour, font size, weight and style.
 - Publish / unpublish, with a 3-panel live preview and a share dialog (QR, embed code, social).
-- Floating chat widget (`public/widget.js`) — idempotent, no dependencies, `fw-` prefixed classes.
-- Public form pages (`/f/{slug}`) and embeddable iframe (`/embed/{slug}`).
+- **Chat-first visitor experience**: one question at a time, the whole conversation stays visible, and a single request is sent when the visitor finishes. Used by the public page (`/f/{slug}`), the embeddable widget (`/embed/{slug}`) and the builder preview.
+- Floating chat widget (`public/widget.js`) — idempotent, no dependencies, `fw-` prefixed classes, lazy-loaded iframe, `data-color` / `data-position` / `data-prefill` support.
 - Templates (admin creates and publishes; owners copy from a template).
 - Roles: `OWNER` (default) and `ADMIN` (created only by `scripts/make-admin.ts`).
 - Responses dashboard with timestamps, per-question columns and detail pages.

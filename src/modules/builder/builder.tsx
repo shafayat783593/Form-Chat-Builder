@@ -6,13 +6,8 @@ import { toast } from "sonner";
 import { saveFormAction } from "@/modules/form/form.actions";
 import { setFormStatusAction } from "@/modules/form/form.actions";
 import { setTemplateStatusAction } from "@/modules/template/template.actions";
-import {
-  useBuilderState,
-  type ServerForm,
-  type BuilderSettings,
-  type ClientQuestion,
-  type QuestionType,
-} from "./use-builder-state";
+import { useBuilderState, type ServerForm, type BuilderSettings, type ClientQuestion } from "./use-builder-state";
+import { hasForbiddenOptionChar, type QuestionType } from "@/lib/field-types";
 import { BuilderShell } from "./components/builder-shell";
 import { TopBar } from "./components/top-bar";
 import { FieldPalette } from "./components/field-palette";
@@ -24,29 +19,18 @@ import { LiveBanner } from "./components/live-banner";
 interface BuilderProps {
   initialForm: ServerForm;
   isTemplate?: boolean;
-  /** Where the "back" button navigates to. Defaults to /dashboard. */
+  /** Where the "back" button navigates to. */
   backHref?: string;
   /** Number of responses received so far (shown in the "form is live" banner). */
   responseCount?: number;
+  /** Route prefix for regular form management. */
+  formPathPrefix?: string;
 }
 
-export function Builder({
-  initialForm,
-  isTemplate = false,
-  backHref = "/dashboard",
-  responseCount = 0,
-}: BuilderProps) {
+export function Builder({ initialForm, isTemplate = false, backHref = "/owner", responseCount = 0, formPathPrefix = "/owner/forms" }: BuilderProps) {
   const router = useRouter();
-  const {
-    state,
-    dispatch,
-    dirty,
-    resetDirty,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-  } = useBuilderState(initialForm);
+
+  const {state,dispatch,dirty, resetDirty, undo, redo, canUndo, canRedo,} = useBuilderState(initialForm);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -58,10 +42,15 @@ export function Builder({
   const status = statusOverride ?? state.status;
   const isDirty = dirty();
 
+  // Block saving while an option contains a comma (it would corrupt
+  // comma-joined multi-select answers).
+  const hasInvalidOptions = questions.some((q) => hasForbiddenOptionChar(q.options));
+  const canSave = !hasInvalidOptions;
+
   // Where the "Preview" button goes and the public share links.
   const previewHref = isTemplate
     ? `/admin/templates/${initialForm.id}/preview`
-    : `/dashboard/forms/${initialForm.id}/preview`;
+    : `${formPathPrefix}/${initialForm.id}/preview`;
   const appUrl =
     typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? "";
   const formUrl = `${appUrl}/f/${initialForm.slug}`;
@@ -95,6 +84,10 @@ export function Builder({
   );
 
   const handleSave = useCallback(async () => {
+    if (hasInvalidOptions) {
+      toast.error("Options cannot contain commas");
+      return;
+    }
     setSaving(true);
     try {
       const res = await saveFormAction(
@@ -131,10 +124,14 @@ export function Builder({
     } finally {
       setSaving(false);
     }
-  }, [initialForm.id, expectedUpdatedAtRef, settings, payloadQuestions, remapIds, resetDirty, isTemplate]);
+  }, [initialForm.id, expectedUpdatedAtRef, settings, payloadQuestions, remapIds, resetDirty, isTemplate, hasInvalidOptions]);
 
   const handlePublish = useCallback(
     async (publish: boolean) => {
+      if (hasInvalidOptions) {
+        toast.error("Options cannot contain commas");
+        return;
+      }
       setPublishing(true);
       try {
         if (isDirty) {
@@ -182,7 +179,7 @@ export function Builder({
         setPublishing(false);
       }
     },
-    [initialForm.id, expectedUpdatedAtRef, isDirty, settings, payloadQuestions, remapIds, resetDirty, isTemplate]
+    [initialForm.id, expectedUpdatedAtRef, isDirty, settings, payloadQuestions, remapIds, resetDirty, isTemplate, hasInvalidOptions]
   );
 
   return (
@@ -193,6 +190,7 @@ export function Builder({
         dirty={isDirty}
         saving={saving}
         publishing={publishing}
+        canSave={canSave}
         onBack={() => router.push(backHref)}
         onTitleChange={(value: string) => dispatch({ type: "UPDATE_SETTINGS", patch: { title: value } })}
         onSave={handleSave}
@@ -212,7 +210,7 @@ export function Builder({
           formUrl={formUrl}
           responseCount={responseCount}
           onShare={() => setShareOpen(true)}
-          responsesHref={isTemplate ? undefined : `/dashboard/forms/${initialForm.id}/responses`}
+          responsesHref={isTemplate ? undefined : `${formPathPrefix}/${initialForm.id}/responses`}
         />
       ) : null}
 

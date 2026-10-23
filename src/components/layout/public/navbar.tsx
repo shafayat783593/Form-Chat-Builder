@@ -6,6 +6,7 @@ import { Menu, MessageSquare, X, LayoutDashboard } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ModeToggle } from "./mode-toggle";
 import { authClient } from "@/lib/auth-client";
+import { getRole } from "@/lib/roles";
 
 const links = [
   { href: "/#features", label: "Features" },
@@ -14,11 +15,11 @@ const links = [
   { href: "/#demo", label: "Demo" },
 ];
 
-function AuthButtons({ signedIn }: { signedIn: boolean }) {
+function AuthButtons({ signedIn, role }: { signedIn: boolean; role: string | null }) {
   if (signedIn) {
     return (
       <Link
-        href="/dashboard"
+        href={role === "ADMIN" ? "/admin" : "/owner"}
         className={buttonVariants({ variant: "ghost" })}
       >
         <LayoutDashboard className="size-4" />
@@ -41,6 +42,7 @@ function AuthButtons({ signedIn }: { signedIn: boolean }) {
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const close = () => setOpen(false);
 
   useEffect(() => {
@@ -48,7 +50,10 @@ export function Navbar() {
     (async () => {
       try {
         const { data } = await authClient.getSession();
-        if (!cancelled) setSignedIn(!!data?.user);
+        if (!cancelled) {
+          setSignedIn(!!data?.user);
+          setRole(data?.user ? getRole(data.user as { role?: unknown }) : null);
+        }
       } catch {
         if (!cancelled) setSignedIn(false);
       }
@@ -83,7 +88,7 @@ export function Navbar() {
           {signedIn === null ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
           ) : (
-            <AuthButtons signedIn={signedIn} />
+            <AuthButtons signedIn={signedIn} role={role} />
           )}
         </div>
 
@@ -120,7 +125,7 @@ export function Navbar() {
               {signedIn === null ? (
                 <div className="h-9 flex-1 animate-pulse rounded-md bg-muted" />
               ) : (
-                <AuthButtons signedIn={signedIn} />
+                <AuthButtons signedIn={signedIn} role={role} />
               )}
             </div>
           </nav>

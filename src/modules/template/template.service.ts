@@ -76,6 +76,56 @@ export async function createTemplate(
 }
 
 /**
+ * Creates an editable draft template from one of the admin's regular forms.
+ * Responses are intentionally not copied: templates only contain form setup
+ * and questions.
+ */
+export async function createTemplateFromForm(ownerId: string, formId: string) {
+  const source = await prisma.form.findFirst({
+    where: { id: formId, ownerId, isTemplate: false },
+    include: { questions: { orderBy: { order: "asc" } } },
+  });
+  if (!source) throw new AppError(404, "Form not found");
+
+  return prisma.form.create({
+    data: {
+      ownerId,
+      title: source.title,
+      slug: await generateFormSlug(),
+      isTemplate: true,
+      status: "DRAFT",
+      templateSlug: `template-${source.slug}`,
+      description: source.description,
+      welcomeText: source.welcomeText,
+      completionText: source.completionText,
+      themeColor: source.themeColor,
+      launcherLabel: source.launcherLabel,
+      widgetPosition: source.widgetPosition,
+      submitButtonText: source.submitButtonText,
+      displayMode: source.displayMode,
+      showProgress: source.showProgress,
+      multiPageForm: source.multiPageForm,
+      questions: {
+        create: source.questions.map((question) => ({
+          type: question.type,
+          label: question.label,
+          options: question.options ?? undefined,
+          required: question.required,
+          order: question.order,
+          prefillKey: question.prefillKey,
+          placeholder: question.placeholder,
+          textColor: question.textColor,
+          fontSize: question.fontSize,
+          fontWeight: question.fontWeight,
+          fontStyle: question.fontStyle,
+        })),
+      },
+    },
+    select: { id: true },
+  });
+}
+
+/**
  * Set the publish status of a template (ADMIN only).
  *
  * PUBLISHED means "visible in the gallery and usable by owners" but the

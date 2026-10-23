@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Generates an 8-char base64url form slug (PRD section 6.1 step 4).
  * Retries on unique collision, up to 3 attempts.
  */
 export async function generateFormSlug(): Promise<string> {

@@ -1,4 +1,4 @@
-import { connection } from "next/server";
+import { Suspense } from "react";
 import { Hero } from "@/modules/public/home/hero";
 import { Features } from "@/modules/public/home/features";
 import { HowItWorks } from "@/modules/public/home/how-it-works";
@@ -8,15 +8,15 @@ import { FAQ } from "@/modules/public/home/faq";
 import { FinalCTA } from "@/modules/public/home/cta";
 import { Footer } from "@/components/layout/public/footer";
 
-export default async function MarketingPage() {
-  await connection();
-
+export default function MarketingPage() {
   return (
     <>
       <Hero />
       <Features />
       <HowItWorks />
-      <TemplatesStrip />
+      <Suspense fallback={<div className="mx-auto max-w-6xl px-4 py-16" />}>
+        <TemplatesStrip />
+      </Suspense>
       <DemoSection />
       <FAQ />
       <FinalCTA />
