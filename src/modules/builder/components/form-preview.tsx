@@ -1,40 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Monitor, Tablet, Smartphone, ArrowLeft } from "lucide-react";
-import { ChatFrame } from "@/modules/chat/chat-frame";
+import { ArrowLeft, Monitor, Smartphone, Tablet } from "lucide-react";
+import { ChatFrame, type ChatFrameForm } from "@/modules/chat/chat-frame";
 import { cn } from "@/lib/utils";
-import type { RuntimeQuestion } from "@/modules/form-runtime/classic-form";
 
-type Device = "desktop" | "tablet" | "mobile";
-
-const DEVICES: { id: Device; label: string; icon: typeof Monitor; width: string }[] = [
+const DEVICES = [
   { id: "desktop", label: "Desktop", icon: Monitor, width: "max-w-3xl" },
   { id: "tablet", label: "Tablet", icon: Tablet, width: "max-w-xl" },
   { id: "mobile", label: "Mobile", icon: Smartphone, width: "max-w-sm" },
-];
+] as const;
 
-export interface PreviewFormData {
-  title: string;
-  description: string | null;
-  welcomeText: string;
-  completionText: string;
-  themeColor: string;
-  submitButtonText: string;
-  displayMode: "CLASSIC" | "FOCUS";
-  showProgress: boolean;
-  multiPageForm: boolean;
-  questions: RuntimeQuestion[];
-}
+export type PreviewFormData = Omit<ChatFrameForm, "slug">;
 
 interface FormPreviewProps {
   form: PreviewFormData;
+  /** Link of the "Back to Editor" button. */
   backHref: string;
+  /** Public link of the form. Only given when the form is published. */
   liveHref?: string;
   formName?: string;
   responseCount?: number;
 }
 
+/** A page that shows the form as a visitor would see it, at three screen sizes. */
 export function FormPreview({
   form,
   backHref,
@@ -42,12 +31,11 @@ export function FormPreview({
   formName,
   responseCount = 0,
 }: FormPreviewProps) {
-  const [device, setDevice] = useState<Device>("desktop");
-  const active = DEVICES.find((d) => d.id === device)!;
+  const [deviceId, setDeviceId] = useState<(typeof DEVICES)[number]["id"]>("desktop");
+  const device = DEVICES.find((item) => item.id === deviceId) ?? DEVICES[0];
 
   return (
     <div className="min-h-svh bg-muted/30">
-      {/* Top bar */}
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -59,20 +47,20 @@ export function FormPreview({
 
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-0.5 rounded-lg border bg-card p-0.5 sm:flex">
-              {DEVICES.map((d) => (
+              {DEVICES.map((item) => (
                 <button
-                  key={d.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => setDevice(d.id)}
+                  onClick={() => setDeviceId(item.id)}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                    device === d.id
+                    deviceId === item.id
                       ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <d.icon className="size-3.5" />
-                  {d.label}
+                  <item.icon className="size-3.5" />
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -87,7 +75,6 @@ export function FormPreview({
         </div>
       </header>
 
-      {/* Preview banner */}
       <div className="mx-auto max-w-5xl px-4 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
           <span>Preview only. Responses and files are not sent or saved.</span>
@@ -104,18 +91,14 @@ export function FormPreview({
         </div>
       </div>
 
-      {/* Form */}
       <div className="mx-auto px-4 py-8">
         <div
           className={cn(
             "mx-auto rounded-xl border bg-card p-6 shadow-sm transition-all sm:p-10",
-            active.width
+            device.width,
           )}
         >
-          <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: form.themeColor }}
-          >
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: form.themeColor }}>
             {form.title}
           </h1>
           {form.description ? (
@@ -124,35 +107,7 @@ export function FormPreview({
 
           <div className="mt-8">
             <div className="h-[640px] overflow-hidden rounded-xl border border-slate-200 bg-white">
-              <ChatFrame
-                form={{
-                  slug: "preview",
-                  title: form.title,
-                  description: form.description,
-                  welcomeText: form.welcomeText,
-                  completionText: form.completionText,
-                  themeColor: form.themeColor,
-                  submitButtonText: form.submitButtonText,
-                  displayMode: form.displayMode,
-                  showProgress: form.showProgress,
-                  multiPageForm: form.multiPageForm,
-                  questions: form.questions.map((q) => ({
-                    id: q.id,
-                    type: q.type,
-                    label: q.label,
-                    options: q.options,
-                    required: q.required,
-                    prefillKey: q.prefillKey,
-                    placeholder: q.placeholder,
-                    textColor: q.textColor,
-                    fontSize: q.fontSize,
-                    fontWeight: q.fontWeight,
-                    fontStyle: q.fontStyle,
-                  })),
-                }}
-                previewMode
-                hideClose
-              />
+              <ChatFrame form={{ ...form, slug: "preview" }} previewMode hideClose />
             </div>
           </div>
         </div>

@@ -1,28 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Copy, Eye, Share2, Inbox } from "lucide-react";
+import { Check, Copy, Eye, Inbox, Share2 } from "lucide-react";
+import { useCopy } from "./builder-ui";
 
 interface LiveBannerProps {
   formUrl: string;
   responseCount: number;
   onShare: () => void;
-  /** Where the "Responses" button goes. */
+  /** Where the "Responses" link goes. Hidden when missing (templates have no responses). */
   responsesHref?: string;
 }
 
+/** The dark strip shown under the top bar while the form is published. */
 export function LiveBanner({ formUrl, responseCount, onShare, responsesHref }: LiveBannerProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopy(formUrl);
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(formUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard may be blocked; the link is selectable in the field.
-    }
-  }
+  const responseSummary =
+    responseCount > 0
+      ? `${responseCount} response${responseCount === 1 ? "" : "s"} so far`
+      : "waiting for its first response";
 
   return (
     <div className="flex flex-col gap-3 bg-foreground px-4 py-4 text-background sm:px-6 lg:px-8">
@@ -30,7 +26,7 @@ export function LiveBanner({ formUrl, responseCount, onShare, responsesHref }: L
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold">
             <span className="size-2 shrink-0 rounded-full bg-success" />
-            Your form is live — {responseCount > 0 ? `${responseCount} response${responseCount === 1 ? "" : "s"} so far` : "waiting for its first response"}
+            Your form is live — {responseSummary}
           </p>
           <p className="mt-1 text-xs text-background/75">
             Send the link to the people you want answers from.{" "}
@@ -72,7 +68,7 @@ export function LiveBanner({ formUrl, responseCount, onShare, responsesHref }: L
         <input
           readOnly
           value={formUrl}
-          onFocus={(e) => e.currentTarget.select()}
+          onFocus={(event) => event.currentTarget.select()}
           aria-label="Public form link"
           className="h-8 min-w-0 flex-1 rounded-lg border border-background/20 bg-background/10 px-2.5 font-mono text-xs text-background"
         />

@@ -4,7 +4,12 @@ import { listPublishedTemplates } from "@/modules/template/template.service";
 
 export async function TemplatesStrip() {
   await connection();
-  const templates = await listPublishedTemplates();
+  let templates: Awaited<ReturnType<typeof listPublishedTemplates>> = [];
+  try {
+    templates = await listPublishedTemplates();
+  } catch (error) {
+    console.error("Failed to load templates:", error);
+  }
   const shown = templates.slice(0, 6);
 
   if (shown.length === 0) return null;

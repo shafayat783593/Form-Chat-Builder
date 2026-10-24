@@ -2,26 +2,29 @@
 
 import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { hasForbiddenOptionChar, OPTION_FORBIDDEN_CHAR } from "@/lib/field-types";
+import {
+  MAX_OPTIONS,
+  MIN_OPTIONS,
+  OPTION_FORBIDDEN_CHAR,
+  hasForbiddenOptionChar,
+} from "@/lib/field-types";
 
-interface OptionEditorProps {
+interface OptionsEditorProps {
   options: string[];
   onChange: (options: string[]) => void;
-  error: string | null;
 }
 
-export function OptionsEditor({ options, onChange, error }: OptionEditorProps) {
-  const hasComma = hasForbiddenOptionChar(options);
+/** Edits the list of choices of a dropdown, radio or checkbox question. */
+export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
+  const canRemove = options.length > MIN_OPTIONS;
+  const canAdd = options.length < MAX_OPTIONS;
 
-  function setOption(index: number, value: string) {
-    const next = [...options];
-    next[index] = value;
-    onChange(next);
+  function changeOption(index: number, value: string) {
+    onChange(options.map((option, i) => (i === index ? value : option)));
   }
 
   function removeOption(index: number) {
-    if (options.length <= 2) return; // keep the minimum of 2
-    onChange(options.filter((_, i) => i !== index));
+    if (canRemove) onChange(options.filter((_, i) => i !== index));
   }
 
   return (
@@ -33,7 +36,7 @@ export function OptionsEditor({ options, onChange, error }: OptionEditorProps) {
             <span className="size-4 shrink-0 rounded-full border border-input" />
             <Input
               value={option}
-              onChange={(e) => setOption(index, e.target.value)}
+              onChange={(event) => changeOption(index, event.target.value)}
               placeholder={`Option ${index + 1}`}
               maxLength={100}
               aria-invalid={invalid}
@@ -42,7 +45,7 @@ export function OptionsEditor({ options, onChange, error }: OptionEditorProps) {
             <button
               type="button"
               onClick={() => removeOption(index)}
-              disabled={options.length <= 2}
+              disabled={!canRemove}
               className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-30 disabled:pointer-events-none"
               aria-label={`Remove option ${index + 1}`}
             >
@@ -51,23 +54,24 @@ export function OptionsEditor({ options, onChange, error }: OptionEditorProps) {
           </div>
         );
       })}
+
       <button
         type="button"
         onClick={() => onChange([...options, ""])}
-        disabled={options.length >= 10}
+        disabled={!canAdd}
         className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-dashed border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
       >
         <Plus className="size-3.5" /> Add option
       </button>
-      {options.length >= 10 ? (
-        <p className="text-[11px] text-muted-foreground">Maximum 10 options.</p>
+
+      {!canAdd ? (
+        <p className="text-[11px] text-muted-foreground">Maximum {MAX_OPTIONS} options.</p>
       ) : null}
-      {hasComma ? (
+      {hasForbiddenOptionChar(options) ? (
         <p role="alert" className="text-[11px] text-destructive">
           Options cannot contain commas
         </p>
       ) : null}
-      {error ? <p role="alert" className="text-[11px] text-destructive">{error}</p> : null}
     </div>
   );
 }

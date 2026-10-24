@@ -29,17 +29,39 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <section id="faq" className="scroll-mt-16 border-b">
+    <section id="faq" className="scroll-mt-16 border-b bg-gradient-to-br from-muted/20 to-background">
       <div className="mx-auto max-w-3xl px-4 py-16 md:py-20">
-        <h2 className="text-3xl font-semibold tracking-tight">Frequently asked questions</h2>
-        <Accordion type="single" collapsible className="mt-8">
+        <div className="mb-12">
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Frequently asked questions</h2>
+          <p className="mt-2 text-lg text-muted-foreground">
+            Everything you need to know about building and embedding conversational forms.
+          </p>
+        </div>
+        <Accordion 
+          type="single" 
+          collapsible 
+          className="mt-8 border rounded-xl bg-card p-2 shadow-sm"
+        >
           {faqs.map((item, i) => (
-            <AccordionItem key={i} value={`item-${i}`}>
-              <AccordionTrigger>{item.q}</AccordionTrigger>
-              <AccordionContent>{item.a}</AccordionContent>
+            <AccordionItem 
+              key={i} 
+              value={`item-${i}`} 
+              className="border-b last:border-b-0 px-4 py-2 rounded-lg transition-all hover:bg-muted/50"
+            >
+              <AccordionTrigger className="hover:no-underline text-left font-medium">
+                {item.q}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed">
+                {item.a}
+              </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
+        <div className="mt-12 text-center">
+          <p className="text-muted-foreground">
+            Have more questions? <a href="mailto:hello@formchat.app" className="font-medium text-primary hover:underline">Contact us</a>
+          </p>
+        </div>
       </div>
     </section>
   );

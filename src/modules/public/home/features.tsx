@@ -37,20 +37,26 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="scroll-mt-16 border-b">
+    <section id="features" className="scroll-mt-16 border-b bg-gradient-to-br from-muted/20 to-background">
       <div className="mx-auto max-w-6xl px-4 py-16 md:py-20">
-        <h2 className="text-3xl font-semibold tracking-tight">Everything you need to collect answers</h2>
-        <p className="mt-2 max-w-prose text-muted-foreground">
-          A focused set of features to build, publish and manage conversational forms.
-        </p>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-12">
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Everything you need to collect answers</h2>
+          <p className="mt-2 max-w-prose text-lg text-muted-foreground">
+            A focused set of features to build, publish and manage conversational forms.
+          </p>
+        </div>
+        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="rounded-xl border bg-card p-5 text-card-foreground">
-              <div className="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <Icon className="size-5" />
+            <li 
+              key={title} 
+              className="group rounded-xl border bg-card p-6 text-card-foreground transition-all duration-300 hover:border-primary/20 hover:bg-card/80 hover:shadow-md"
+            >
+              <div className="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 text-primary shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all">
+                <Icon className="size-6" />
               </div>
-              <h3 className="font-medium">{title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+              <h3 className="text-lg font-semibold group-hover:text-primary">{title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+              <div className="mt-4 h-0.5 w-12 bg-gradient-to-r from-primary/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
             </li>
           ))}
         </ul>

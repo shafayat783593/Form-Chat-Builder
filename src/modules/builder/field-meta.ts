@@ -1,31 +1,36 @@
 import {
-  Type,
   AlignLeft,
-  Mail,
-  Hash,
-  Phone,
   Calendar,
-  ChevronDownSquare,
-  CircleDot,
   CheckSquare,
+  ChevronDownSquare,
   CircleCheck,
-  Star,
-  SlidersHorizontal,
+  CircleDot,
   Gauge,
+  Hash,
+  Mail,
   MapPin,
+  Phone,
+  SlidersHorizontal,
+  Star,
+  Type,
   User,
   type LucideIcon,
 } from "lucide-react";
 import type { QuestionType } from "@/lib/field-types";
 
+/** How the builder shows one question type: its name, icon and default hint text. */
 export interface FieldTypeMeta {
   type: QuestionType;
+  /** Name shown in the palette and used as the default question label. */
   label: string;
   icon: LucideIcon;
+  /** Default placeholder of the input. Empty when the type has no text box. */
   placeholder: string;
+  /** "text" types have an editable placeholder. */
   kind: "text" | "choice" | "multi" | "scale";
 }
 
+/** The order here is the order of the palette on the left of the builder. */
 export const FIELD_TYPES: FieldTypeMeta[] = [
   { type: "TEXT", label: "Text Input", icon: Type, placeholder: "Enter your answer", kind: "text" },
   { type: "TEXTAREA", label: "Textarea", icon: AlignLeft, placeholder: "Type your message…", kind: "text" },
@@ -44,16 +49,9 @@ export const FIELD_TYPES: FieldTypeMeta[] = [
   { type: "FULL_NAME", label: "Full Name", icon: User, placeholder: "Enter your full name", kind: "text" },
 ];
 
-const BY_TYPE = new Map(FIELD_TYPES.map((f) => [f.type, f]));
-
+/** Looks up the display info of a type. Unknown types fall back to a plain text field. */
 export function fieldMeta(type: QuestionType): FieldTypeMeta {
-  return (
-    BY_TYPE.get(type) ?? {
-      type,
-      label: type,
-      icon: Type,
-      placeholder: "Enter your answer",
-      kind: "text",
-    }
-  );
+  const found = FIELD_TYPES.find((item) => item.type === type);
+  if (found) return found;
+  return { type, label: type, icon: Type, placeholder: "Enter your answer", kind: "text" };
 }

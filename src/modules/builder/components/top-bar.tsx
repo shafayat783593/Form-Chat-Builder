@@ -2,68 +2,74 @@
 
 import {
   ArrowLeft,
-  Undo2,
-  Redo2,
-  Eye,
-  Settings,
-  Save,
-  Rocket,
   Check,
-  X,
-  Square,
+  Eye,
+  Loader2,
   MousePointerClick,
+  Redo2,
+  Rocket,
+  Save,
+  Settings,
   Share2,
+  Square,
+  Undo2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { FormStatus } from "../builder-state";
+import { IconButton } from "./builder-ui";
+
+const OUTLINE_BUTTON =
+  "hidden h-8 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:pointer-events-none";
+
+const SOLID_BUTTON =
+  "inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground text-sm font-semibold text-background transition-opacity hover:opacity-90";
 
 interface TopBarProps {
   title: string;
-  status: "DRAFT" | "PUBLISHED";
-  dirty: boolean;
-  saving: boolean;
-  publishing: boolean;
-  /** Set to false to block saving (e.g. invalid options). */
-  canSave?: boolean;
+  status: FormStatus;
+  hasUnsavedChanges: boolean;
+  /** What the screen is waiting for right now, if anything. */
+  busy: "saving" | "publishing" | null;
+  /** False blocks saving, for example while an option contains a comma. */
+  canSave: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
   onBack: () => void;
-  onTitleChange: (value: string) => void;
+  onTitleChange: (title: string) => void;
   onSave: () => void;
-  onPublish: () => void;
-  onUnpublish: () => void;
+  onTogglePublish: () => void;
   onPreview: () => void;
   onSettings: () => void;
   onShare: () => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 export function TopBar({
   title,
   status,
-  dirty,
-  saving,
-  publishing,
-  canSave = true,
+  hasUnsavedChanges,
+  busy,
+  canSave,
+  canUndo,
+  canRedo,
   onBack,
   onTitleChange,
   onSave,
-  onPublish,
-  onUnpublish,
+  onTogglePublish,
   onPreview,
   onSettings,
   onShare,
   onUndo,
   onRedo,
-  canUndo = false,
-  canRedo = false,
 }: TopBarProps) {
   const isPublished = status === "PUBLISHED";
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-3 sm:px-4">
-      {/* Brand + form name */}
+      {/* Left: back button, name of the app, form title, status */}
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -79,68 +85,36 @@ export function TopBar({
         <span className="hidden text-muted-foreground md:inline">·</span>
         <Input
           value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
+          onChange={(event) => onTitleChange(event.target.value)}
           maxLength={120}
           aria-label="Form name"
           className="h-8 w-40 min-w-0 border-transparent bg-transparent px-2 text-sm font-semibold shadow-none hover:border-input focus:border-input sm:w-56 lg:w-72"
           placeholder="Untitled form"
         />
-        <Badge
-          variant="outline"
-          className="hidden shrink-0 gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline-flex"
-        >
-          {isPublished ? (
-            <>
-              <span className="size-2 rounded-full bg-success" />
-              Live
-            </>
-          ) : (
-            <>
-              <Square className="size-2 fill-current" />
-              Draft
-            </>
-          )}
-        </Badge>
+        <StatusBadge isPublished={isPublished} />
       </div>
 
       <div className="flex-1" />
 
-      {/* Right actions */}
+      {/* Right: actions */}
       <div className="flex shrink-0 items-center gap-1.5">
         <div className="hidden items-center gap-0.5 sm:flex">
-          <button
-            type="button"
-            onClick={onUndo}
-            disabled={!canUndo}
-            className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:pointer-events-none"
-            aria-label="Undo"
-          >
+          <IconButton label="Undo" size="medium" onClick={onUndo} disabled={!canUndo}>
             <Undo2 className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onRedo}
-            disabled={!canRedo}
-            className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:pointer-events-none"
-            aria-label="Redo"
-          >
+          </IconButton>
+          <IconButton label="Redo" size="medium" onClick={onRedo} disabled={!canRedo}>
             <Redo2 className="size-4" />
-          </button>
+          </IconButton>
         </div>
 
-        <button
-          type="button"
-          onClick={onPreview}
-          className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted"
-          aria-label="Preview"
-        >
+        <IconButton label="Preview" size="medium" onClick={onPreview}>
           <Eye className="size-4" />
-        </button>
+        </IconButton>
 
         <button
           type="button"
           onClick={onSettings}
-          className="hidden h-8 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-muted lg:inline-flex"
+          className={cn(OUTLINE_BUTTON, "lg:inline-flex")}
           aria-label="Settings"
         >
           <Settings className="size-4" />
@@ -150,29 +124,19 @@ export function TopBar({
         <button
           type="button"
           onClick={onSave}
-          disabled={!dirty || !canSave || saving || publishing}
-          className="hidden h-8 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:pointer-events-none sm:inline-flex"
+          disabled={!hasUnsavedChanges || !canSave || busy !== null}
+          className={cn(OUTLINE_BUTTON, "sm:inline-flex")}
           aria-label="Save"
         >
-          {saving ? (
-            <>
-              <Save className="size-4 animate-spin" />
-              <span>Saving…</span>
-            </>
-          ) : (
-            <>
-              <Save className="size-4" />
-              <span>Save</span>
-            </>
-          )}
+          {busy === "saving" ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          <span>{busy === "saving" ? "Saving…" : "Save"}</span>
         </button>
 
-        {/* Share */}
         <button
           type="button"
           onClick={onShare}
           disabled={!isPublished}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground px-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+          className={cn(SOLID_BUTTON, "px-3 disabled:opacity-40")}
           aria-label="Share form"
         >
           <Share2 className="size-4" />
@@ -182,41 +146,15 @@ export function TopBar({
 
         <button
           type="button"
-          onClick={isPublished ? onUnpublish : onPublish}
-          disabled={saving || publishing}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-foreground px-3.5 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+          onClick={onTogglePublish}
+          disabled={busy !== null}
+          className={cn(SOLID_BUTTON, "px-3.5 disabled:opacity-50")}
           aria-label={isPublished ? "Unpublish" : "Publish"}
         >
-          {publishing ? (
-            <>
-              <X className="size-4 animate-spin" />
-              <span className="hidden sm:inline">{isPublished ? "Unpublishing…" : "Publishing…"}</span>
-            </>
-          ) : isPublished ? (
-            <>
-              <MousePointerClick className="size-4" />
-              <span className="hidden sm:inline">Unpublish</span>
-            </>
-          ) : (
-            <>
-              <Rocket className="size-4" />
-              <span className="hidden sm:inline">Publish</span>
-            </>
-          )}
+          <PublishLabel isPublished={isPublished} busy={busy === "publishing"} />
         </button>
 
-        {/* Unsaved indicator */}
-        {dirty ? (
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground xl:inline-flex">
-            <span className="size-1.5 rounded-full bg-primary" />
-            Unsaved changes
-          </span>
-        ) : (
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground xl:inline-flex">
-            <Check className="size-3.5 text-success" />
-            Saved
-          </span>
-        )}
+        <SaveIndicator hasUnsavedChanges={hasUnsavedChanges} />
 
         {/* Avatar */}
         <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
@@ -224,5 +162,59 @@ export function TopBar({
         </span>
       </div>
     </header>
+  );
+}
+
+function StatusBadge({ isPublished }: { isPublished: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className="hidden shrink-0 gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline-flex"
+    >
+      {isPublished ? (
+        <span className="size-2 rounded-full bg-success" />
+      ) : (
+        <Square className="size-2 fill-current" />
+      )}
+      {isPublished ? "Live" : "Draft"}
+    </Badge>
+  );
+}
+
+/** Icon and text of the publish button, which changes with the form's state. */
+function PublishLabel({ isPublished, busy }: { isPublished: boolean; busy: boolean }) {
+  if (busy) {
+    return (
+      <>
+        <Loader2 className="size-4 animate-spin" />
+        <span className="hidden sm:inline">{isPublished ? "Unpublishing…" : "Publishing…"}</span>
+      </>
+    );
+  }
+
+  const Icon = isPublished ? MousePointerClick : Rocket;
+  return (
+    <>
+      <Icon className="size-4" />
+      <span className="hidden sm:inline">{isPublished ? "Unpublish" : "Publish"}</span>
+    </>
+  );
+}
+
+function SaveIndicator({ hasUnsavedChanges }: { hasUnsavedChanges: boolean }) {
+  return (
+    <span className="hidden items-center gap-1.5 text-xs text-muted-foreground xl:inline-flex">
+      {hasUnsavedChanges ? (
+        <>
+          <span className="size-1.5 rounded-full bg-primary" />
+          Unsaved changes
+        </>
+      ) : (
+        <>
+          <Check className="size-3.5 text-success" />
+          Saved
+        </>
+      )}
+    </span>
   );
 }

@@ -1,12 +1,12 @@
-"use client";
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-import * as React from "react";
-
-export interface BuilderShellProps {
-  children: React.ReactNode;
+interface BuilderShellProps {
+  children: ReactNode;
   className?: string;
 }
 
+/** The full-height frame that holds the top bar and the three panels. */
 export function BuilderShell({ children, className }: BuilderShellProps) {
   return (
     <div
@@ -16,8 +16,4 @@ export function BuilderShell({ children, className }: BuilderShellProps) {
       {children}
     </div>
   );
-}
-
-function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ");
 }

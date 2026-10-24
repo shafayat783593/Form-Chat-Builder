@@ -25,7 +25,12 @@ export default function TemplatesPage() {
 
 async function TemplateGrid() {
   await connection();
-  const templates = await listPublishedTemplates();
+  let templates: Awaited<ReturnType<typeof listPublishedTemplates>> = [];
+  try {
+    templates = await listPublishedTemplates();
+  } catch (error) {
+    console.error("Failed to load templates:", error);
+  }
 
   if (templates.length === 0) {
     return (

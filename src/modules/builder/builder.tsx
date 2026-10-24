@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveFormAction } from "@/modules/form/form.actions";
-import { setFormStatusAction } from "@/modules/form/form.actions";
+import { saveFormAction, setFormStatusAction } from "@/modules/form/form.actions";
 import { setTemplateStatusAction } from "@/modules/template/template.actions";
-import { useBuilderState, type ServerForm, type BuilderSettings, type ClientQuestion } from "./use-builder-state";
-import { hasForbiddenOptionChar, type QuestionType } from "@/lib/field-types";
+import { hasForbiddenOptionChar } from "@/lib/field-types";
+import { toSaveQuestion, type FormStatus, type ServerForm } from "./builder-state";
+import { useBuilderState } from "./use-builder-state";
+import { useAppOrigin } from "./use-app-origin";
 import { BuilderShell } from "./components/builder-shell";
 import { TopBar } from "./components/top-bar";
 import { FieldPalette } from "./components/field-palette";
@@ -16,193 +17,134 @@ import { SettingsPanel } from "./components/settings-panel";
 import { ShareDialog } from "./components/share-dialog";
 import { LiveBanner } from "./components/live-banner";
 
+const SETTINGS_PANEL_ID = "form-settings";
+const COMMA_ERROR = "Options cannot contain commas";
+
 interface BuilderProps {
   initialForm: ServerForm;
+  /** True when an admin is editing a template instead of a normal form. */
   isTemplate?: boolean;
-  /** Where the "back" button navigates to. */
+  /** Where the back button goes. */
   backHref?: string;
-  /** Number of responses received so far (shown in the "form is live" banner). */
+  /** Shown in the "your form is live" banner. */
   responseCount?: number;
-  /** Route prefix for regular form management. */
+  /** Start of the form pages, e.g. "/owner/forms". Used for the preview and responses links. */
   formPathPrefix?: string;
 }
 
-export function Builder({ initialForm, isTemplate = false, backHref = "/owner", responseCount = 0, formPathPrefix = "/owner/forms" }: BuilderProps) {
+export function Builder({
+  initialForm,
+  isTemplate = false,
+  backHref = "/owner",
+  responseCount = 0,
+  formPathPrefix = "/owner/forms",
+}: BuilderProps) {
   const router = useRouter();
+  const origin = useAppOrigin();
+  const { settings, questions, hasUnsavedChanges, canUndo, canRedo, actions } = useBuilderState(initialForm);
 
-  const {state,dispatch,dirty, resetDirty, undo, redo, canUndo, canRedo,} = useBuilderState(initialForm);
-  const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [status, setStatus] = useState<FormStatus>(initialForm.status);
+  const [busy, setBusy] = useState<"saving" | "publishing" | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const [statusOverride, setStatusOverride] = useState<"DRAFT" | "PUBLISHED" | null>(null);
-  const expectedUpdatedAtRef = useRef(initialForm.updatedAt);
 
-  const questions = state.questions;
-  const settings = state.settings as BuilderSettings;
-  const status = statusOverride ?? state.status;
-  const isDirty = dirty();
+  // Sent with every save so the server can refuse to overwrite newer changes.
+  const lastUpdatedAt = useRef(initialForm.updatedAt);
 
-  // Block saving while an option contains a comma (it would corrupt
-  // comma-joined multi-select answers).
   const hasInvalidOptions = questions.some((q) => hasForbiddenOptionChar(q.options));
-  const canSave = !hasInvalidOptions;
 
-  // Where the "Preview" button goes and the public share links.
+  const formBasePath = `${formPathPrefix}/${initialForm.id}`;
   const previewHref = isTemplate
     ? `/admin/templates/${initialForm.id}/preview`
-    : `${formPathPrefix}/${initialForm.id}/preview`;
-  const appUrl =
-    typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const formUrl = `${appUrl}/f/${initialForm.slug}`;
-  const embedCode = `<script src="${appUrl}/widget.js" data-form="${initialForm.slug}"></script>`;
+    : `${formBasePath}/preview`;
+  const formUrl = `${origin}/f/${initialForm.slug}`;
+  const embedCode = `<script src="${origin}/widget.js" data-form="${initialForm.slug}"></script>`;
 
-  const payloadQuestions = useCallback(() =>
-    questions.map((q: ClientQuestion) => ({
-      clientId: q.clientId,
-      id: q.id,
-      type: q.type,
-      label: q.label,
-      options: q.options.length > 0 ? q.options : undefined,
-      required: q.required,
-      prefillKey: q.prefillKey ?? undefined,
-      placeholder: q.placeholder ?? undefined,
-      textColor: q.textColor ?? undefined,
-      fontSize: q.fontSize ?? undefined,
-      fontWeight: q.fontWeight ?? undefined,
-      fontStyle: q.fontStyle ?? undefined,
-    })),
-  [questions]
-  );
+  /** Sends the current content to the server. Returns true when it was saved. */
+  async function saveChanges(): Promise<boolean> {
+    const result = await saveFormAction(
+      {
+        formId: initialForm.id,
+        expectedUpdatedAt: lastUpdatedAt.current,
+        settings,
+        questions: questions.map(toSaveQuestion),
+      },
+      isTemplate,
+    );
 
-  const remapIds = useCallback(
-    (idMap: Array<{ clientId?: string; id: string }>) => {
-      idMap.forEach((m) => {
-        if (m.clientId) dispatch({ type: "UPDATE_QUESTION", clientId: m.clientId, patch: { id: m.id } });
-      });
-    },
-    [dispatch]
-  );
+    if (!result.ok) {
+      toast.error(result.error);
+      return false;
+    }
 
-  const handleSave = useCallback(async () => {
+    actions.markSaved(result.data.questions);
+    lastUpdatedAt.current = result.data.form.updatedAt;
+    return true;
+  }
+
+  async function handleSave() {
     if (hasInvalidOptions) {
-      toast.error("Options cannot contain commas");
+      toast.error(COMMA_ERROR);
       return;
     }
-    setSaving(true);
-    try {
-      const res = await saveFormAction(
-        {
-          formId: initialForm.id,
-          expectedUpdatedAt: expectedUpdatedAtRef.current,
-          settings: {
-            title: settings.title,
-            description: settings.description,
-            welcomeText: settings.welcomeText,
-            completionText: settings.completionText,
-            themeColor: settings.themeColor,
-            launcherLabel: settings.launcherLabel,
-            widgetPosition: settings.widgetPosition,
-            submitButtonText: settings.submitButtonText,
-            displayMode: settings.displayMode,
-            showProgress: settings.showProgress,
-            multiPageForm: settings.multiPageForm,
-            notifyOnResponse: settings.notifyOnResponse,
-            notifyEmails: settings.notifyEmails,
-          },
-          questions: payloadQuestions(),
-        },
-        isTemplate,
-      );
-      if (res.ok) {
-        remapIds(res.data.questions);
-        resetDirty();
-        expectedUpdatedAtRef.current = res.data.form.updatedAt;
-        toast.success("Saved");
-      } else {
-        toast.error(res.error ?? "Save failed");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }, [initialForm.id, expectedUpdatedAtRef, settings, payloadQuestions, remapIds, resetDirty, isTemplate, hasInvalidOptions]);
 
-  const handlePublish = useCallback(
-    async (publish: boolean) => {
-      if (hasInvalidOptions) {
-        toast.error("Options cannot contain commas");
+    setBusy("saving");
+    try {
+      if (await saveChanges()) toast.success("Saved");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleTogglePublish() {
+    if (hasInvalidOptions) {
+      toast.error(COMMA_ERROR);
+      return;
+    }
+
+    const publish = status !== "PUBLISHED";
+    const newStatus: FormStatus = publish ? "PUBLISHED" : "DRAFT";
+
+    setBusy("publishing");
+    try {
+      // Publish what is on screen, not an older saved version.
+      if (hasUnsavedChanges && !(await saveChanges())) return;
+
+      const result = isTemplate
+        ? await setTemplateStatusAction(initialForm.id, newStatus)
+        : await setFormStatusAction(initialForm.id, newStatus);
+
+      if (!result.ok) {
+        toast.error(result.error);
         return;
       }
-      setPublishing(true);
-      try {
-        if (isDirty) {
-          const res = await saveFormAction(
-            {
-              formId: initialForm.id,
-              expectedUpdatedAt: expectedUpdatedAtRef.current,
-              settings: {
-                title: settings.title,
-                description: settings.description,
-                welcomeText: settings.welcomeText,
-                completionText: settings.completionText,
-                themeColor: settings.themeColor,
-                launcherLabel: settings.launcherLabel,
-                widgetPosition: settings.widgetPosition,
-                submitButtonText: settings.submitButtonText,
-                displayMode: settings.displayMode,
-                showProgress: settings.showProgress,
-                multiPageForm: settings.multiPageForm,
-                notifyOnResponse: settings.notifyOnResponse,
-                notifyEmails: settings.notifyEmails,
-              },
-              questions: payloadQuestions(),
-            },
-            isTemplate,
-          );
-          if (!res.ok) {
-            toast.error(res.error ?? "Save before publish failed");
-            return;
-          }
-          remapIds(res.data.questions);
-          expectedUpdatedAtRef.current = res.data.form.updatedAt;
-          resetDirty();
-        }
-        // Templates use the admin-guarded action; regular forms the owner action.
-        if (isTemplate) {
-          await setTemplateStatusAction(initialForm.id, publish ? "PUBLISHED" : "DRAFT");
-        } else {
-          await setFormStatusAction(initialForm.id, publish ? "PUBLISHED" : "DRAFT");
-        }
-        setStatusOverride(publish ? "PUBLISHED" : "DRAFT");
-        toast.success(publish ? "Published" : "Unpublished");
-        if (publish) setShareOpen(true);
-      } finally {
-        setPublishing(false);
-      }
-    },
-    [initialForm.id, expectedUpdatedAtRef, isDirty, settings, payloadQuestions, remapIds, resetDirty, isTemplate, hasInvalidOptions]
-  );
+
+      setStatus(newStatus);
+      toast.success(publish ? "Published" : "Unpublished");
+      if (publish) setShareOpen(true);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <BuilderShell>
       <TopBar
         title={settings.title}
         status={status}
-        dirty={isDirty}
-        saving={saving}
-        publishing={publishing}
-        canSave={canSave}
-        onBack={() => router.push(backHref)}
-        onTitleChange={(value: string) => dispatch({ type: "UPDATE_SETTINGS", patch: { title: value } })}
-        onSave={handleSave}
-        onPublish={() => handlePublish(true)}
-        onUnpublish={() => handlePublish(false)}
-        onPreview={() => router.push(previewHref)}
-        onSettings={() => {}}
-        onShare={() => setShareOpen(true)}
-        onUndo={undo}
-        onRedo={redo}
+        hasUnsavedChanges={hasUnsavedChanges}
+        busy={busy}
+        canSave={!hasInvalidOptions}
         canUndo={canUndo}
         canRedo={canRedo}
+        onBack={() => router.push(backHref)}
+        onTitleChange={(title) => actions.updateSettings({ title })}
+        onSave={handleSave}
+        onTogglePublish={handleTogglePublish}
+        onPreview={() => router.push(previewHref)}
+        onSettings={() => document.getElementById(SETTINGS_PANEL_ID)?.focus()}
+        onShare={() => setShareOpen(true)}
+        onUndo={actions.undo}
+        onRedo={actions.redo}
       />
 
       {status === "PUBLISHED" ? (
@@ -210,52 +152,39 @@ export function Builder({ initialForm, isTemplate = false, backHref = "/owner", 
           formUrl={formUrl}
           responseCount={responseCount}
           onShare={() => setShareOpen(true)}
-          responsesHref={isTemplate ? undefined : `${formPathPrefix}/${initialForm.id}/responses`}
+          responsesHref={isTemplate ? undefined : `${formBasePath}/responses`}
         />
       ) : null}
 
       <div className="flex flex-1 min-w-0 overflow-hidden">
         <aside className="hidden w-72 shrink-0 border-r border-border bg-background lg:block">
-          <FieldPalette
-            onAdd={(type: QuestionType, label?: string) =>
-              dispatch({ type: "ADD_QUESTION", question: { type, label: label ?? "" } })
-            }
-          />
+          <FieldPalette onAdd={actions.addQuestion} />
         </aside>
 
         <div className="min-w-0 flex-1 overflow-y-auto bg-muted/20">
           <QuestionCanvas
             questions={questions}
             description={settings.description}
-            onDescriptionChange={(value) =>
-              dispatch({ type: "UPDATE_SETTINGS", patch: { description: value } })
-            }
-            onUpdate={(clientId: string, patch: Partial<ClientQuestion>) =>
-              dispatch({ type: "UPDATE_QUESTION", clientId, patch })
-            }
-            onRemove={(clientId: string) => dispatch({ type: "REMOVE_QUESTION", clientId })}
-            onMove={(fromIndex: number, toIndex: number) =>
-              dispatch({ type: "MOVE_QUESTION", fromIndex, toIndex })
-            }
-            onDuplicate={(clientId: string) => dispatch({ type: "DUPLICATE_QUESTION", clientId })}
+            onDescriptionChange={(description) => actions.updateSettings({ description })}
+            actions={actions}
           />
         </div>
 
-        <aside className="hidden w-80 shrink-0 border-l border-border bg-background lg:block">
+        <aside
+          id={SETTINGS_PANEL_ID}
+          tabIndex={-1}
+          className="hidden w-80 shrink-0 border-l border-border bg-background outline-none lg:block"
+        >
           <SettingsPanel
             settings={settings}
             questions={questions}
             slug={initialForm.slug}
             status={status}
-            publishing={publishing}
-            onUpdate={(patch: Partial<BuilderSettings>) =>
-              dispatch({ type: "UPDATE_SETTINGS", patch })
-            }
-            onUpdateQuestion={(clientId: string, patch: { prefillKey?: string | null }) =>
-              dispatch({ type: "UPDATE_QUESTION", clientId, patch })
-            }
+            publishing={busy === "publishing"}
+            onUpdateSettings={actions.updateSettings}
+            onUpdateQuestion={actions.updateQuestion}
             onShare={() => setShareOpen(true)}
-            onUnpublish={() => handlePublish(false)}
+            onUnpublish={handleTogglePublish}
           />
         </aside>
       </div>

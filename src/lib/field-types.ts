@@ -1,7 +1,18 @@
 
 import { z } from "zod";
 
-export const QUESTION_TYPES = ["TEXT", "TEXTAREA", "EMAIL","NUMBER","PHONE","DATE","CHOICE","RADIO","CHECKBOX",
+
+
+export const QUESTION_TYPES = [
+  "TEXT",
+  "TEXTAREA",
+  "EMAIL",
+  "NUMBER",
+  "PHONE",
+  "DATE",
+  "CHOICE", // dropdown
+  "RADIO",
+  "CHECKBOX",
   "YES_NO",
   "RATING",
   "RANGE",
@@ -12,74 +23,61 @@ export const QUESTION_TYPES = ["TEXT", "TEXTAREA", "EMAIL","NUMBER","PHONE","DAT
 
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
-
-/** Types that need a list of options. */
-export const OPTION_TYPES: QuestionType[] = ["CHOICE", "RADIO", "CHECKBOX"];
-
-/** Types that accept more than one answer (stored comma separated). */
-export const MULTI_TYPES: QuestionType[] = ["CHECKBOX"];
-
-export function isQuestionType(value: unknown): value is QuestionType {
-  return typeof value === "string" && (QUESTION_TYPES as readonly string[]).includes(value);
-}
+/** Types where the visitor picks from a list of options written by the owner. */
+const TYPES_WITH_OPTIONS: readonly QuestionType[] = ["CHOICE", "RADIO", "CHECKBOX"];
 
 export function hasOptions(type: QuestionType): boolean {
-  return OPTION_TYPES.includes(type);
+  return TYPES_WITH_OPTIONS.includes(type);
 }
 
-export function isMultiSelect(type: QuestionType): boolean {
-  return MULTI_TYPES.includes(type);
-}
+// Options (dropdown / radio / checkbox)
 
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 10;
 
 /**
- * Multi-select answers are stored as a comma-joined string, so an option may
- * not contain a comma - otherwise the stored answer cannot be split back into
- * the original options.
+ * A checkbox answer is stored as one comma-separated string ("A,B"), so an
+ * option itself must not contain a comma, otherwise the answer cannot be split
+ * back into the options the visitor picked.
  */
 export const OPTION_FORBIDDEN_CHAR = ",";
 
 export function hasForbiddenOptionChar(options: string[]): boolean {
-  return options.some((o) => o.includes(OPTION_FORBIDDEN_CHAR));
+  return options.some((option) => option.includes(OPTION_FORBIDDEN_CHAR));
 }
 
-/**
- * Shared zod schema for a question's options. Used by every write path
- * (add/update question and the builder save) so a comma can never reach the
- * database.
- */
+/** Validates a question's options. Used by every path that writes questions. */
 export const optionsSchema = z
   .array(z.string().trim().min(1).max(100))
-  .min(2)
-  .max(10)
-  .refine((o) => new Set(o).size === o.length, "Options must be unique")
-  .refine(
-    (o) => !o.some((opt) => opt.includes(OPTION_FORBIDDEN_CHAR)),
-    "Options cannot contain commas",
-  );
+  .min(MIN_OPTIONS)
+  .max(MAX_OPTIONS)
+  .refine((options) => new Set(options).size === options.length, "Options must be unique")
+  .refine((options) => !hasForbiddenOptionChar(options), "Options cannot contain commas");
 
-/** RATING: 1..5 stars. */
-export const RATING_MIN = 1;
+// ---------------------------------------------------------------------------
+// Scale questions
+// ---------------------------------------------------------------------------
+
+export const RATING_MIN = 1; // stars
 export const RATING_MAX = 5;
-/** RANGE: slider 0..100. */
-export const RANGE_MIN = 0;
+export const RANGE_MIN = 0; // slider
 export const RANGE_MAX = 100;
-/** NPS: 0..10. */
-export const NPS_MIN = 0;
+export const NPS_MIN = 0; // net promoter score
 export const NPS_MAX = 10;
+
+// ---------------------------------------------------------------------------
+// Per-question text style
+// ---------------------------------------------------------------------------
 
 export const FONT_WEIGHTS = ["normal", "medium", "semibold", "bold"] as const;
 export const FONT_STYLES = ["normal", "italic"] as const;
 export const MIN_FONT_SIZE = 10;
 export const MAX_FONT_SIZE = 32;
-export const MAX_PLACEHOLDER = 120;
-
-/** Defaults applied when a field has no explicit style stored. */
 export const DEFAULT_FONT_SIZE = 14;
 export const DEFAULT_FONT_WEIGHT = "semibold";
+export const MAX_PLACEHOLDER = 120;
 
+/** The optional look of one question. A missing value means "use the default". */
 export interface FieldStyle {
   placeholder?: string | null;
   textColor?: string | null;
@@ -88,116 +86,93 @@ export interface FieldStyle {
   fontStyle?: string | null;
 }
 
-/**
- * Resolves the effective style of a field. Font size and weight always have a
- * value so a field never renders unstyled (thin, tiny) text.
- */
-export function resolveFieldStyle(style: FieldStyle | null | undefined) {
+/** Turns a question's style into inline CSS, filling in the defaults. */
+export function fieldStyleCss(style: FieldStyle): React.CSSProperties {
   return {
-    fontSize: style?.fontSize ?? DEFAULT_FONT_SIZE,
-    fontWeight: (style?.fontWeight ?? DEFAULT_FONT_WEIGHT) as
-      | "normal"
-      | "medium"
-      | "semibold"
-      | "bold",
-    fontStyle: (style?.fontStyle ?? "normal") as "normal" | "italic",
-    color: style?.textColor ?? undefined,
-    placeholder: style?.placeholder ?? undefined,
+    fontSize: `${style.fontSize ?? DEFAULT_FONT_SIZE}px`,
+    fontWeight: style.fontWeight ?? DEFAULT_FONT_WEIGHT,
+    fontStyle: style.fontStyle ?? "normal",
+    color: style.textColor ?? undefined,
   };
 }
 
-/** Builds the inline style object for a field's label / input text. */
-export function fieldStyleCss(style: FieldStyle | null | undefined): React.CSSProperties {
-  const s = resolveFieldStyle(style);
-  return {
-    fontSize: `${s.fontSize}px`,
-    fontWeight: s.fontWeight,
-    fontStyle: s.fontStyle,
-    color: s.color,
-  };
+// ---------------------------------------------------------------------------
+// Answer validation (runs in the browser and again on the server)
+// ---------------------------------------------------------------------------
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_LENGTH = 254;
+
+/** Types that only need their text to match a pattern. */
+const PATTERN_RULES: Partial<Record<QuestionType, { pattern: RegExp; message: string }>> = {
+  NUMBER: { pattern: /^-?\d+(\.\d+)?$/, message: "Enter a valid number" },
+  PHONE: { pattern: /^\+?[\d\s()-]{6,20}$/, message: "Enter a valid phone number" },
+  DATE: { pattern: /^\d{4}-\d{2}-\d{2}$/, message: "Enter a valid date" },
+};
+
+function isWholeNumberBetween(value: string, min: number, max: number): boolean {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= min && number <= max;
 }
-
-
-export function isFontWeight(value: unknown): boolean {
-  return typeof value === "string" && (FONT_WEIGHTS as readonly string[]).includes(value);
-}
-
-export function isFontStyle(value: unknown): boolean {
-  return typeof value === "string" && (FONT_STYLES as readonly string[]).includes(value);
-}
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Server-side validation of a single answer for a given question.
- * Returns an error message, or null when the value is acceptable.
+ * Checks one answer against its question.
+ * Returns an error message, or null when the answer is fine.
+ *
+ * An empty answer is always fine here: whether it is allowed is the job of the
+ * question's `required` flag, not of the answer's type.
  */
 export function validateAnswer(
   type: QuestionType,
   value: string,
   options: string[] | null,
 ): string | null {
-  const v = value.trim();
-  if (v === "") return null; // emptiness is handled by the required check
+  const answer = value.trim();
+  if (answer === "") return null;
+
+  const patternRule = PATTERN_RULES[type];
+  if (patternRule) {
+    return patternRule.pattern.test(answer) ? null : patternRule.message;
+  }
 
   switch (type) {
     case "EMAIL":
-      if (v.length > 254) return "Email address is too long";
-      if (!EMAIL_RE.test(v)) return "Enter a valid email address";
-      return null;
-    case "NUMBER": {
-      if (!/^-?\d+(\.\d+)?$/.test(v)) return "Enter a valid number";
-      return null;
-    }
-    case "PHONE": {
-      if (!/^\+?[\d\s()-]{6,20}$/.test(v)) return "Enter a valid phone number";
-      return null;
-    }
-    case "DATE": {
-      if (!DATE_RE.test(v)) return "Enter a valid date";
-      return null;
-    }
+      if (answer.length > MAX_EMAIL_LENGTH) return "Email address is too long";
+      return EMAIL_PATTERN.test(answer) ? null : "Enter a valid email address";
+
     case "CHOICE":
-    case "RADIO": {
-      const opts = options ?? [];
-      if (!opts.includes(v)) return "Choose one of the available options";
-      return null;
-    }
+    case "RADIO":
+      return (options ?? []).includes(answer) ? null : "Choose one of the available options";
+
     case "CHECKBOX": {
-      const opts = options ?? [];
-      const picked = v.split(",").map((s) => s.trim()).filter(Boolean);
+      const picked = answer.split(",").map((item) => item.trim()).filter(Boolean);
       if (picked.length === 0) return "Choose at least one option";
-      if (picked.some((p) => !opts.includes(p))) return "Choose only from the available options";
-      return null;
+      const allowed = options ?? [];
+      return picked.every((item) => allowed.includes(item))
+        ? null
+        : "Choose only from the available options";
     }
-    case "YES_NO": {
-      if (v !== "yes" && v !== "no") return "Answer must be yes or no";
-      return null;
-    }
-    case "RATING": {
-      const n = Number(v);
-      if (!Number.isInteger(n) || n < RATING_MIN || n > RATING_MAX)
-        return `Rating must be between ${RATING_MIN} and ${RATING_MAX}`;
-      return null;
-    }
+
+    case "YES_NO":
+      return answer === "yes" || answer === "no" ? null : "Answer must be yes or no";
+
+    case "RATING":
+      return isWholeNumberBetween(answer, RATING_MIN, RATING_MAX)
+        ? null
+        : `Rating must be between ${RATING_MIN} and ${RATING_MAX}`;
+
+    case "NPS":
+      return isWholeNumberBetween(answer, NPS_MIN, NPS_MAX)
+        ? null
+        : `Score must be between ${NPS_MIN} and ${NPS_MAX}`;
+
     case "RANGE": {
-      const n = Number(v);
-      if (!Number.isFinite(n) || n < RANGE_MIN || n > RANGE_MAX)
-        return `Value must be between ${RANGE_MIN} and ${RANGE_MAX}`;
-      return null;
+      const number = Number(answer);
+      const inRange = Number.isFinite(number) && number >= RANGE_MIN && number <= RANGE_MAX;
+      return inRange ? null : `Value must be between ${RANGE_MIN} and ${RANGE_MAX}`;
     }
-    case "NPS": {
-      const n = Number(v);
-      if (!Number.isInteger(n) || n < NPS_MIN || n > NPS_MAX)
-        return `Score must be between ${NPS_MIN} and ${NPS_MAX}`;
-      return null;
-    }
-    case "TEXT":
-    case "TEXTAREA":
-    case "ADDRESS":
-    case "FULL_NAME":
-      return null;
+
+    // TEXT, TEXTAREA, ADDRESS and FULL_NAME accept any text.
     default:
       return null;
   }

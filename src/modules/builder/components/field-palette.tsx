@@ -5,9 +5,10 @@ import type { QuestionType } from "@/lib/field-types";
 import { FIELD_TYPES } from "../field-meta";
 
 interface FieldPaletteProps {
-  onAdd: (type: QuestionType, label?: string) => void;
+  onAdd: (type: QuestionType) => void;
 }
 
+/** The left panel: one button per question type. Clicking adds it to the form. */
 export function FieldPalette({ onAdd }: FieldPaletteProps) {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
@@ -23,17 +24,17 @@ export function FieldPalette({ onAdd }: FieldPaletteProps) {
       </div>
 
       <div className="flex flex-col gap-2 px-3 pb-4">
-        {FIELD_TYPES.map((item) => (
+        {FIELD_TYPES.map(({ type, label, icon: Icon }) => (
           <button
-            key={item.type}
+            key={type}
             type="button"
-            onClick={() => onAdd(item.type, item.label)}
+            onClick={() => onAdd(type)}
             className="group flex items-center gap-3 rounded-xl border border-input bg-card px-3 py-2.5 text-left transition-colors hover:border-foreground/20 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-foreground text-background transition-transform group-hover:scale-105">
-              <item.icon className="size-4" />
+              <Icon className="size-4" />
             </span>
-            <span className="flex-1 truncate text-sm font-medium">{item.label}</span>
+            <span className="flex-1 truncate text-sm font-medium">{label}</span>
           </button>
         ))}
       </div>

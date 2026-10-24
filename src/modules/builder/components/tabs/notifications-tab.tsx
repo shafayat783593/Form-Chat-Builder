@@ -1,27 +1,26 @@
 "use client";
 
-import { Plus, X, Mail } from "lucide-react";
+import { Mail, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { MAX_NOTIFY_EMAILS } from "@/lib/limits";
 import { cn } from "@/lib/utils";
+import type { BuilderSettings } from "../../builder-state";
+
+type NotificationSettings = Pick<BuilderSettings, "notifyOnResponse" | "notifyEmails">;
 
 interface NotificationsTabProps {
-  settings: {
-    notifyOnResponse: boolean;
-    notifyEmails: string[];
-  };
-  onUpdate: (patch: Partial<NotificationsTabProps["settings"]>) => void;
+  settings: NotificationSettings;
+  onUpdate: (patch: Partial<NotificationSettings>) => void;
 }
 
+/** Choose who gets an email when someone submits the form. */
 export function NotificationsTab({ settings, onUpdate }: NotificationsTabProps) {
-  const emails = settings.notifyEmails ?? [];
+  const { notifyOnResponse, notifyEmails: emails } = settings;
 
-  function setEmail(index: number, value: string) {
-    const next = [...emails];
-    next[index] = value;
-    onUpdate({ notifyEmails: next });
+  function changeEmail(index: number, value: string) {
+    onUpdate({ notifyEmails: emails.map((email, i) => (i === index ? value : email)) });
   }
 
   function removeEmail(index: number) {
@@ -29,8 +28,7 @@ export function NotificationsTab({ settings, onUpdate }: NotificationsTabProps) 
   }
 
   function addEmail() {
-    if (emails.length >= MAX_NOTIFY_EMAILS) return;
-    onUpdate({ notifyEmails: [...emails, ""] });
+    if (emails.length < MAX_NOTIFY_EMAILS) onUpdate({ notifyEmails: [...emails, ""] });
   }
 
   return (
@@ -48,16 +46,14 @@ export function NotificationsTab({ settings, onUpdate }: NotificationsTabProps) 
           </div>
         </div>
         <Switch
-          checked={settings.notifyOnResponse}
+          checked={notifyOnResponse}
           onCheckedChange={(checked) => onUpdate({ notifyOnResponse: checked })}
           aria-label="Email me on new response"
         />
       </div>
 
-      <div className={cn("flex flex-col gap-2", !settings.notifyOnResponse && "opacity-50")}>
-        <Label className="text-xs font-medium text-muted-foreground">
-          Notify these addresses
-        </Label>
+      <div className={cn("flex flex-col gap-2", !notifyOnResponse && "opacity-50")}>
+        <Label className="text-xs font-medium text-muted-foreground">Notify these addresses</Label>
 
         {emails.length === 0 ? (
           <p className="rounded-lg border border-dashed px-3 py-3 text-xs text-muted-foreground">
@@ -69,16 +65,16 @@ export function NotificationsTab({ settings, onUpdate }: NotificationsTabProps) 
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(index, e.target.value)}
+                onChange={(event) => changeEmail(index, event.target.value)}
                 placeholder="you@example.com"
-                disabled={!settings.notifyOnResponse}
+                disabled={!notifyOnResponse}
                 className="h-8"
                 aria-label={`Notification email ${index + 1}`}
               />
               <button
                 type="button"
                 onClick={() => removeEmail(index)}
-                disabled={!settings.notifyOnResponse}
+                disabled={!notifyOnResponse}
                 className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:pointer-events-none"
                 aria-label={`Remove email ${index + 1}`}
               >
@@ -91,7 +87,7 @@ export function NotificationsTab({ settings, onUpdate }: NotificationsTabProps) 
         <button
           type="button"
           onClick={addEmail}
-          disabled={!settings.notifyOnResponse || emails.length >= MAX_NOTIFY_EMAILS}
+          disabled={!notifyOnResponse || emails.length >= MAX_NOTIFY_EMAILS}
           className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-dashed border-input px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
           <Plus className="size-3.5" /> Add email

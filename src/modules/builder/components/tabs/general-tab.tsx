@@ -1,75 +1,46 @@
 "use client";
 
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Share2, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Share2, Undo2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { BuilderSettings, FormStatus } from "../../builder-state";
+import { Field } from "../builder-ui";
 
 interface GeneralTabProps {
-  settings: {
-    title: string;
-    description: string | null;
-    welcomeText: string;
-    completionText: string;
-    submitButtonText: string;
-    displayMode: "CLASSIC" | "FOCUS";
-    showProgress: boolean;
-    multiPageForm: boolean;
-  };
-  status: "DRAFT" | "PUBLISHED";
-  onUpdate: (patch: Partial<GeneralTabProps["settings"]>) => void;
-  onShare?: () => void;
-  onUnpublish?: () => void;
-  publishing?: boolean;
+  settings: BuilderSettings;
+  status: FormStatus;
+  publishing: boolean;
+  onUpdate: (patch: Partial<BuilderSettings>) => void;
+  onShare: () => void;
+  onUnpublish: () => void;
 }
 
-function Field({
-  label,
-  hint,
-  counter,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  counter?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-foreground">{label}</span>
-      {children}
-      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
-      {counter ? <p className="text-[11px] text-muted-foreground">{counter}</p> : null}
-    </div>
-  );
-}
-
+/** Title, messages, submit button text and the published / draft state. */
 export function GeneralTab({
   settings,
   status,
+  publishing,
   onUpdate,
   onShare,
   onUnpublish,
-  publishing,
 }: GeneralTabProps) {
   const isPublished = status === "PUBLISHED";
 
   return (
     <div className="flex flex-col gap-6 pb-8">
-      {/* Submit button text */}
       <Field label="Submit Button Text">
         <Input
           value={settings.submitButtonText}
-          onChange={(e) => onUpdate({ submitButtonText: e.target.value })}
+          onChange={(event) => onUpdate({ submitButtonText: event.target.value })}
           maxLength={30}
           className="h-9"
         />
       </Field>
 
-      {/* Form status */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold text-foreground">Form Status</span>
@@ -77,7 +48,7 @@ export function GeneralTab({
             variant="outline"
             className={cn(
               "gap-1 rounded-full px-2 py-0.5 text-[11px]",
-              isPublished ? "border-success/40 text-success" : "text-muted-foreground"
+              isPublished ? "border-success/40 text-success" : "text-muted-foreground",
             )}
           >
             <span
@@ -86,6 +57,7 @@ export function GeneralTab({
             {isPublished ? "Published" : "Draft"}
           </Badge>
         </div>
+
         {isPublished ? (
           <>
             <Button
@@ -106,14 +78,13 @@ export function GeneralTab({
         ) : null}
       </div>
 
-      {/* Form structure */}
       <div className="flex flex-col gap-3 border-t pt-4">
         <span className="text-xs font-semibold text-foreground">Form Structure</span>
 
         <label className="flex cursor-pointer items-center gap-2 text-xs">
           <Switch
             checked={settings.multiPageForm}
-            onCheckedChange={(checked) => onUpdate({ multiPageForm: checked })}
+            onCheckedChange={(multiPageForm) => onUpdate({ multiPageForm })}
           />
           Multi-page form <span className="text-muted-foreground">(not used in chat)</span>
         </label>
@@ -121,18 +92,17 @@ export function GeneralTab({
         <label className="flex cursor-pointer items-center gap-2 text-xs">
           <Switch
             checked={settings.showProgress}
-            onCheckedChange={(checked) => onUpdate({ showProgress: checked })}
+            onCheckedChange={(showProgress) => onUpdate({ showProgress })}
           />
           Show progress indicator
         </label>
       </div>
 
-      {/* Text content */}
       <div className="flex flex-col gap-5 border-t pt-4">
         <Field label="Form title" counter={`${settings.title.length}/120`}>
           <Input
             value={settings.title}
-            onChange={(e) => onUpdate({ title: e.target.value })}
+            onChange={(event) => onUpdate({ title: event.target.value })}
             maxLength={120}
             className="h-9"
           />
@@ -145,7 +115,7 @@ export function GeneralTab({
         >
           <Textarea
             value={settings.description ?? ""}
-            onChange={(e) => onUpdate({ description: e.target.value || null })}
+            onChange={(event) => onUpdate({ description: event.target.value || null })}
             maxLength={500}
             className="min-h-20 resize-none"
           />
@@ -158,7 +128,7 @@ export function GeneralTab({
         >
           <Textarea
             value={settings.welcomeText}
-            onChange={(e) => onUpdate({ welcomeText: e.target.value })}
+            onChange={(event) => onUpdate({ welcomeText: event.target.value })}
             maxLength={300}
             className="min-h-20 resize-none"
           />
@@ -171,7 +141,7 @@ export function GeneralTab({
         >
           <Textarea
             value={settings.completionText}
-            onChange={(e) => onUpdate({ completionText: e.target.value })}
+            onChange={(event) => onUpdate({ completionText: event.target.value })}
             maxLength={300}
             className="min-h-20 resize-none"
           />

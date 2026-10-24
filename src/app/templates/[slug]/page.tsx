@@ -28,7 +28,12 @@ async function TemplateContent({
 }) {
   await connection();
   const { slug } = await params;
-  const template = await getPublishedTemplateBySlug(slug);
+  let template: Awaited<ReturnType<typeof getPublishedTemplateBySlug>> = null;
+  try {
+    template = await getPublishedTemplateBySlug(slug);
+  } catch (error) {
+    console.error("Failed to load template:", error);
+  }
   if (!template) notFound();
 
   const session = await getSession();
