@@ -18,7 +18,7 @@ export function FinalCTA() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link 
-                href="/signup" 
+                href="/login" 
                 className="group relative inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all duration-300 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25"
               >
                 Get started free
