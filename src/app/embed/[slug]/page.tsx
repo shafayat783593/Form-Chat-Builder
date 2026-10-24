@@ -13,7 +13,13 @@ export default function EmbedPage({
 }) {
   return (
     <div className="flex h-dvh flex-col bg-white">
-      <Suspense fallback={<div className="h-full w-full animate-pulse bg-white" />}>
+      <Suspense fallback={<div className="h-full w-full bg-background flex items-center justify-center">
+  <div className="flex flex-col items-center gap-3">
+    <div className="size-10 rounded-full border-4 border-muted" />
+    <div className="size-10 absolute rounded-full border-4 border-primary border-t-transparent animate-spin" />
+    <p className="text-sm text-muted-foreground">Loading form...</p>
+  </div>
+</div>}>
         <EmbedChat params={params} searchParams={searchParams} />
       </Suspense>
     </div>

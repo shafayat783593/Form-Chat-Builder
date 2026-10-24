@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Menu, MessageSquare, X, LayoutDashboard, LogOut } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ModeToggle } from "./mode-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { getRole } from "@/lib/roles";
 
@@ -107,7 +108,7 @@ export function Navbar() {
         <div className="hidden items-center gap-2 md:flex">
           <ModeToggle />
           {signedIn === null ? (
-            <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+            <Skeleton className="h-9 w-24" />
           ) : (
             <AuthButtons signedIn={signedIn} role={role} />
           )}
@@ -144,7 +145,7 @@ export function Navbar() {
             ))}
             <div className="mt-2 flex gap-2">
               {signedIn === null ? (
-                <div className="h-9 flex-1 animate-pulse rounded-md bg-muted" />
+                <Skeleton className="h-9 flex-1" />
               ) : (
                 <AuthButtons signedIn={signedIn} role={role} />
               )}
