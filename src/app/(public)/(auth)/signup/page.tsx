@@ -6,7 +6,7 @@ import { AuthForm } from "@/modules/auth/components/auth-form";
 
 export default function SignupPage() {
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/40 px-4">
+    <div className="flex min-h-svh items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <Suspense fallback={<div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm animate-pulse" />}>
           <SignupGuard />

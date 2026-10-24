@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, MessageSquare, X, LayoutDashboard } from "lucide-react";
+import { Menu, MessageSquare, X, LayoutDashboard, LogOut } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ModeToggle } from "./mode-toggle";
 import { authClient } from "@/lib/auth-client";
@@ -16,15 +17,35 @@ const links = [
 ];
 
 function AuthButtons({ signedIn, role }: { signedIn: boolean; role: string | null }) {
+  const router = useRouter();
+  const handleLogout = async () => {
+    try {
+      await authClient.signOut();
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   if (signedIn) {
     return (
-      <Link
-        href={role === "ADMIN" ? "/admin" : "/owner"}
-        className={buttonVariants({ variant: "ghost" })}
-      >
-        <LayoutDashboard className="size-4" />
-        Dashboard
-      </Link>
+      <>
+        <Link
+          href={role === "ADMIN" ? "/admin" : "/owner"}
+          className={buttonVariants({ variant: "ghost" })}
+        >
+          <LayoutDashboard className="size-4" />
+          Dashboard
+        </Link>
+        <button
+          onClick={handleLogout}
+          className={buttonVariants({ variant: "ghost" })}
+        >
+          <LogOut className="size-4" />
+          Logout
+        </button>
+      </>
     );
   }
   return (
