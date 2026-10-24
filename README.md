@@ -137,7 +137,3 @@ prisma/{schema.prisma, seed.ts, migrations/}
 docs/PRD.md
 ```
 
-## Full product spec
-
-See [`docs/PRD.md`](docs/PRD.md) for the complete product requirements, data
-model, API contracts, builder specification and task list.

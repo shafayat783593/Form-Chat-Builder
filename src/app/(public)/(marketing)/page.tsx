@@ -6,7 +6,6 @@ import { TemplatesStrip } from "@/modules/public/home/templates-strip";
 import { DemoSection } from "@/modules/public/home/demo-section";
 import { FAQ } from "@/modules/public/home/faq";
 import { FinalCTA } from "@/modules/public/home/cta";
-import { Footer } from "@/components/layout/public/footer";
 
 export default function MarketingPage() {
   return (

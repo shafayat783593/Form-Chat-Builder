@@ -41,7 +41,12 @@ export default function AdminOverviewPage() {
 
 async function AdminOverview() {
   const user = await requireAdminPage();
-  const templates = await listTemplatesForAdmin(user.id);
+  let templates: Awaited<ReturnType<typeof listTemplatesForAdmin>> = [];
+  try {
+    templates = await listTemplatesForAdmin(user.id);
+  } catch (error) {
+    console.error("Failed to load templates:", error);
+  }
 
   const total = templates.length;
   const published = templates.filter((t) => t.status === "PUBLISHED").length;
