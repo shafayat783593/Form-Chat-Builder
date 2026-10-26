@@ -17,13 +17,10 @@ interface FormPreviewProps {
   form: PreviewFormData;
   /** Link of the "Back to Editor" button. */
   backHref: string;
-  /** Public link of the form. Only given when the form is published. */
   liveHref?: string;
   formName?: string;
   responseCount?: number;
 }
-
-/** A page that shows the form as a visitor would see it, at three screen sizes. */
 export function FormPreview({
   form,
   backHref,
