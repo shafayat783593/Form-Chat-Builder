@@ -79,7 +79,6 @@ src/
   lib/            Shared code, e.g. field-types.ts (field types + answer validation)
 prisma/           schema.prisma, migrations, seed
 public/widget.js  The script that embeds the chat widget
-docs/PRD.md       Product requirements
 ```
 
 ### The builder

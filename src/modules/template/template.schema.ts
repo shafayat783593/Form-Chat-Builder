@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 // templateSlug: readable public URL, e.g. "course-enrollment"
-// Matches ^[a-z0-9]+(-[a-z0-9]+)*$, 3–60 chars (PRD section 6.5).
 export const createTemplateSchema = z.object({
   title: z.string().trim().min(1).max(120),
   templateSlug: z

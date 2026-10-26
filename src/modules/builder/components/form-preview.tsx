@@ -15,7 +15,6 @@ export type PreviewFormData = Omit<ChatFrameForm, "slug">;
 
 interface FormPreviewProps {
   form: PreviewFormData;
-  /** Link of the "Back to Editor" button. */
   backHref: string;
   liveHref?: string;
   formName?: string;

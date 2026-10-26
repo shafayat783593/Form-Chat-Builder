@@ -3,9 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/* ------------------------------------------------------------------ */
-/* Context                                                             */
-/* ------------------------------------------------------------------ */
+
 
 type SidebarContextValue = {
   open: boolean;
@@ -21,9 +19,7 @@ export function useSidebar(): SidebarContextValue {
   return ctx;
 }
 
-/* ------------------------------------------------------------------ */
-/* Provider                                                            */
-/* ------------------------------------------------------------------ */
+
 
 export interface SidebarProviderProps {
   children: React.ReactNode;
@@ -65,9 +61,7 @@ export function SidebarProvider({
   );
 }
 
-/* ------------------------------------------------------------------ */
 /* Trigger                                                             */
-/* ------------------------------------------------------------------ */
 
 export interface SidebarTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
@@ -107,9 +101,7 @@ export function SidebarTrigger({ className, onClick, ...props }: SidebarTriggerP
   );
 }
 
-/* ------------------------------------------------------------------ */
 /* Primitives                                                          */
-/* ------------------------------------------------------------------ */
 
 export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "sidebar" | "floating" | "inset";
@@ -244,9 +236,7 @@ export function SidebarRail({ className, ...props }: React.HTMLAttributes<HTMLDi
   );
 }
 
-/* ------------------------------------------------------------------ */
 /* Menu                                                                */
-/* ------------------------------------------------------------------ */
 
 export function SidebarMenu({ className, ...props }: React.HTMLAttributes<HTMLUListElement>) {
   return (

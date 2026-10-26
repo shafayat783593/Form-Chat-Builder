@@ -30,23 +30,17 @@ export function hasOptions(type: QuestionType): boolean {
   return TYPES_WITH_OPTIONS.includes(type);
 }
 
-// Options (dropdown / radio / checkbox)
 
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 10;
 
-/**
- * A checkbox answer is stored as one comma-separated string ("A,B"), so an
- * option itself must not contain a comma, otherwise the answer cannot be split
- * back into the options the visitor picked.
- */
+
 export const OPTION_FORBIDDEN_CHAR = ",";
 
 export function hasForbiddenOptionChar(options: string[]): boolean {
   return options.some((option) => option.includes(OPTION_FORBIDDEN_CHAR));
 }
 
-/** Validates a question's options. Used by every path that writes questions. */
 export const optionsSchema = z
   .array(z.string().trim().min(1).max(100))
   .min(MIN_OPTIONS)
@@ -96,9 +90,7 @@ export function fieldStyleCss(style: FieldStyle): React.CSSProperties {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Answer validation (runs in the browser and again on the server)
-// ---------------------------------------------------------------------------
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
@@ -115,13 +107,7 @@ function isWholeNumberBetween(value: string, min: number, max: number): boolean 
   return Number.isInteger(number) && number >= min && number <= max;
 }
 
-/**
- * Checks one answer against its question.
- * Returns an error message, or null when the answer is fine.
- *
- * An empty answer is always fine here: whether it is allowed is the job of the
- * question's `required` flag, not of the answer's type.
- */
+
 export function validateAnswer(
   type: QuestionType,
   value: string,

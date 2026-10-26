@@ -1,10 +1,3 @@
-/**
- * In-memory rate limiter for the public submission endpoint.
- *
- * NOTE: this is per-instance state. On serverless (Vercel) every instance has
- * its own counters, so the effective limit is "per instance, per cold start".
- * The production fix is a shared store (Upstash Redis / Vercel KV).
- */
 
 export interface RateLimitResult {
   /** Whether the request is allowed. */

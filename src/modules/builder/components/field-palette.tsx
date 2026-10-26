@@ -7,8 +7,6 @@ import { FIELD_TYPES } from "../field-meta";
 interface FieldPaletteProps {
   onAdd: (type: QuestionType) => void;
 }
-
-/** The left panel: one button per question type. Clicking adds it to the form. */
 export function FieldPalette({ onAdd }: FieldPaletteProps) {
   return (
     <div className="flex h-full flex-col overflow-y-auto">

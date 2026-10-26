@@ -70,7 +70,6 @@ export interface BuilderContent {
   questions: ClientQuestion[];
 }
 
-/** Server answer to a save: which database id each question received. */
 export interface SavedQuestionId {
   clientId?: string;
   id: string;

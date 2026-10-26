@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * Small pieces the builder screens share, so each screen only describes what is
- * special about it.
- */
-
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,13 +18,11 @@ const ICON_BUTTON_TONE = {
 };
 
 interface IconButtonProps extends Omit<ComponentProps<"button">, "type"> {
-  /** Read by screen readers; there is no visible text on an icon button. */
   label: string;
   size?: keyof typeof ICON_BUTTON_SIZE;
   tone?: keyof typeof ICON_BUTTON_TONE;
 }
 
-/** A square button that only shows an icon. */
 export function IconButton({
   label,
   size = "small",

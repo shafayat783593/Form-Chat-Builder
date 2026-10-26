@@ -6,7 +6,6 @@ import { getPublishedFormBySlug } from "@/modules/form/form.service";
 import { ChatFrame } from "@/modules/chat/chat-frame";
 import { ViewportBox } from "@/modules/chat/viewport-box";
 
-// Phones shrink the page itself when the keyboard opens, instead of panning over it.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -49,7 +48,6 @@ async function EmbedChat({
   const colorOverride =
     colorParam && /^#[0-9a-fA-F]{6}$/.test(colorParam) ? colorParam : undefined;
 
-  // sourceOrigin is a hint; the server reduces it to an origin.
   const srcParam = typeof query.src === "string" ? query.src : undefined;
 
   return (

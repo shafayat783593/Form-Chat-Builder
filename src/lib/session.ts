@@ -20,22 +20,14 @@ export async function requireUserPage() {
   return session.user;
 }
 
-/**
- * Service-layer guard for anything an admin may do (templates, ...).
- * Throws a 403 AppError, which server actions turn into a failed ActionResult
- * and route handlers into a 403 response.
- */
+
 export async function requireAdmin() {
   const user = await requireUser();
   if (getRole(user) !== "ADMIN") throw new AppError(403, "Forbidden");
   return user;
 }
 
-/**
- * Page guard for /admin/*. A signed-in non-admin gets the not-found page
- * (404, not 403) so the existence of the admin area is not disclosed.
- * An anonymous visitor is redirected to /login by requireUserPage().
- */
+
 export async function requireAdminPage() {
   const user = await requireUserPage();
   if (getRole(user) !== "ADMIN") notFound();

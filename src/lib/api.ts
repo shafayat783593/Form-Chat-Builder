@@ -1,7 +1,6 @@
 import { ZodError } from "zod";
 import { AppError } from "./errors";
 
-/** Maximum size of a public submission body (PRD section 7.1). */
 export const MAX_BODY_BYTES = 32 * 1024;
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
@@ -44,7 +43,6 @@ export async function readJson(req: Request, maxBytes = MAX_BODY_BYTES): Promise
   }
 }
 
-/** Best-effort client IP, used as part of the rate-limit key. */
 export function clientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();

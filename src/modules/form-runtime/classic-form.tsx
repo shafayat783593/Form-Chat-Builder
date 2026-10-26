@@ -1,5 +1,4 @@
-// UNUSED: the visitor experience is chat-only (see modules/chat). This file is
-// kept for reference and for a future multi-page form mode; nothing renders it.
+
 "use client";
 
 import { useState } from "react";
@@ -54,15 +53,12 @@ export interface RuntimeForm {
 
 interface ClassicFormProps {
   form: RuntimeForm;
-  /** When set the form actually submits to the public API. */
   live?: boolean;
   onComplete?: () => void;
-  /** Query string used to pre-answer questions that have a prefillKey. */
   searchParams?: SearchParams;
 }
 
 export function ClassicForm({ form, live = false, onComplete, searchParams }: ClassicFormProps) {
-  // Prefill: only values that pass the normal validation are accepted.
   const [values, setValues] = useState<Record<string, string>>(() =>
     collectPrefill(form.questions, searchParams),
   );

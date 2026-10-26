@@ -5,7 +5,6 @@ import { submitResponse } from "@/modules/response/response.service";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
-/** Submissions allowed per minute, per IP, per form. */
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 1000;
 

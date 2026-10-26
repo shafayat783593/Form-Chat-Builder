@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-/** Public submission body (PRD section 7.1). */
 export const submitResponseSchema = z.object({
   answers: z
     .array(
@@ -10,10 +9,7 @@ export const submitResponseSchema = z.object({
       }),
     )
     .max(100),
-  /**
-   * Page the form was embedded on. Only the origin is stored - never the full
-   * URL, query string or path. Invalid values are ignored.
-   */
+
   sourceUrl: z.string().max(2048).optional(),
 });
 

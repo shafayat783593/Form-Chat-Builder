@@ -1,5 +1,4 @@
-// Runs under `npx tsx prisma/seed.ts` — relative imports only (no @/),
-// per the Prisma 7 rules in PRD section 3.
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
