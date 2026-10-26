@@ -70,22 +70,13 @@ export function Footer() {
             <ul className="mt-3 space-y-2 text-sm">
               <li>
                 <a
-                  href="mailto:hello@formchat.app"
+                  href="mailto:shafayat783@gmail.com"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  hello@formchat.app
+                  shafayat783@gmail.com
                 </a>
               </li>
-              <li>
-                <a
-                  href="https://github.com/anomalyco/opencode"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  GitHub
-                </a>
-              </li>
+             
             </ul>
           </div>
         </div>

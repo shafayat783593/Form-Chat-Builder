@@ -40,11 +40,12 @@ export function SidebarProvider({
   onOpenChange,
   className,
 }: SidebarProviderProps) {
-  const [open, setOpenState] = React.useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const open = openProp ?? internalOpen;
 
   const setOpen = React.useCallback(
     (next: boolean) => {
-      setOpenState(next);
+      setInternalOpen(next);
       onOpenChange?.(next);
     },
     [onOpenChange],
@@ -53,8 +54,8 @@ export function SidebarProvider({
   const toggle = React.useCallback(() => setOpen(!open), [open, setOpen]);
 
   const value = React.useMemo<SidebarContextValue>(
-    () => ({ open: openProp ?? open, setOpen, toggle }),
-    [openProp, open, setOpen, toggle],
+    () => ({ open, setOpen, toggle }),
+    [open, setOpen, toggle],
   );
 
   return (

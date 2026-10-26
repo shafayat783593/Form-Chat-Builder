@@ -156,10 +156,7 @@ export function TopBar({
 
         <SaveIndicator hasUnsavedChanges={hasUnsavedChanges} />
 
-        {/* Avatar */}
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-          S
-        </span>
+    
       </div>
     </header>
   );

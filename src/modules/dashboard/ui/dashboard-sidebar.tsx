@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,6 +42,7 @@ export function DashboardSidebar({
   userName: string;
 }) {
   const pathname = usePathname();
+  const { setOpen } = useSidebar();
   const routes = sidebarRoutes[role] ?? [];
 
   return (
@@ -67,7 +69,7 @@ export function DashboardSidebar({
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
-                        render={<Link href={item.url} />}
+                        render={<Link href={item.url} onClick={() => setOpen(false)} />}
                         isActive={isActiveRoute(pathname, item.url)}
                       >
                         {Icon ? <Icon /> : null}

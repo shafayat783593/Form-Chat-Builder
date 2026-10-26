@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Bell, ChevronRight, House, Search } from "lucide-react";
@@ -58,16 +59,30 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
   const pathname = usePathname();
   const { user } = useGetLoggedInUser();
   const userName = user?.name ?? "Account";
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   return (
-    <SidebarProvider>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+      {sidebarOpen ? (
+        <div
+          className="fixed inset-0 z-20 bg-background/80 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      ) : null}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-200 ease-out lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
         <DashboardSidebar role={role} userName={userName} />
       </aside>
 
       <SidebarInset className="dashboard-bg lg:pl-64">
-        <header className="glass sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-border/60 px-4 sm:gap-3 sm:px-6">
-          <SidebarTrigger className="-ml-1" />
+        <header className="glass sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b border-border/60 px-4 sm:gap-3 sm:px-6">
+          <SidebarTrigger className="-ml-1 lg:hidden" />
           <Separator orientation="vertical" className="h-5" />
           <div className="min-w-0 flex-1">
             <Breadcrumbs pathname={pathname} />

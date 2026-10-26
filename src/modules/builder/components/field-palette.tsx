@@ -29,7 +29,7 @@ export function FieldPalette({ onAdd }: FieldPaletteProps) {
             key={type}
             type="button"
             onClick={() => onAdd(type)}
-            className="group flex items-center gap-3 rounded-xl border border-input bg-card px-3 py-2.5 text-left transition-colors hover:border-foreground/20 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+            className="group flex items-center gap-3 rounded-xl border border-input bg-card px-3 py-2.5 text-left transition-all hover:border-foreground/20 hover:bg-muted/50 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-foreground text-background transition-transform group-hover:scale-105">
               <Icon className="size-4" />

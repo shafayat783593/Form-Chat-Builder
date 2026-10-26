@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveFormAction, setFormStatusAction } from "@/modules/form/form.actions";
 import { setTemplateStatusAction } from "@/modules/template/template.actions";
-import { hasForbiddenOptionChar } from "@/lib/field-types";
+import { hasForbiddenOptionChar, type QuestionType } from "@/lib/field-types";
 import { toSaveQuestion, type FormStatus, type ServerForm } from "./builder-state";
 import { useBuilderState } from "./use-builder-state";
 import { useAppOrigin } from "./use-app-origin";
@@ -46,6 +46,12 @@ export function Builder({
   const [status, setStatus] = useState<FormStatus>(initialForm.status);
   const [busy, setBusy] = useState<"saving" | "publishing" | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<"fields" | "settings" | null>(null);
+
+  function handleAddQuestion(type: QuestionType) {
+    actions.addQuestion(type);
+    toast.success("Field added");
+  }
 
   // Sent with every save so the server can refuse to overwrite newer changes.
   const lastUpdatedAt = useRef(initialForm.updatedAt);
@@ -141,7 +147,7 @@ export function Builder({
         onSave={handleSave}
         onTogglePublish={handleTogglePublish}
         onPreview={() => router.push(previewHref)}
-        onSettings={() => document.getElementById(SETTINGS_PANEL_ID)?.focus()}
+        onSettings={() => setMobilePanel("settings")}
         onShare={() => setShareOpen(true)}
         onUndo={actions.undo}
         onRedo={actions.redo}
@@ -156,9 +162,26 @@ export function Builder({
         />
       ) : null}
 
-      <div className="flex flex-1 min-w-0 overflow-hidden">
+      <div className="flex shrink-0 items-center justify-center gap-3 border-b bg-background px-3 py-2 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobilePanel("fields")}
+          className="rounded-full border bg-card px-4 py-2 text-xs font-semibold shadow-soft"
+        >
+          Fields
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobilePanel("settings")}
+          className="rounded-full border bg-card px-4 py-2 text-xs font-semibold shadow-soft"
+        >
+          Settings
+        </button>
+      </div>
+
+      <div className="flex min-w-0 flex-1 overflow-hidden">
         <aside className="hidden w-72 shrink-0 border-r border-border bg-background lg:block">
-          <FieldPalette onAdd={actions.addQuestion} />
+          <FieldPalette onAdd={handleAddQuestion} />
         </aside>
 
         <div className="min-w-0 flex-1 overflow-y-auto bg-muted/20">
@@ -188,6 +211,44 @@ export function Builder({
           />
         </aside>
       </div>
+
+      {mobilePanel ? (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobilePanel(null)}>
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+          <div
+            className="absolute bottom-0 left-0 right-0 max-h-[85svh] overflow-y-auto rounded-t-2xl border-t bg-background p-2 shadow-pop"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between px-2">
+              <span className="text-sm font-semibold">
+                {mobilePanel === "fields" ? "Form Fields" : "Form Settings"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobilePanel(null)}
+                className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+            {mobilePanel === "fields" ? (
+              <FieldPalette onAdd={handleAddQuestion} />
+            ) : (
+              <SettingsPanel
+                settings={settings}
+                questions={questions}
+                slug={initialForm.slug}
+                status={status}
+                publishing={busy === "publishing"}
+                onUpdateSettings={actions.updateSettings}
+                onUpdateQuestion={actions.updateQuestion}
+                onShare={() => setShareOpen(true)}
+                onUnpublish={handleTogglePublish}
+              />
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <ShareDialog
         open={shareOpen}
