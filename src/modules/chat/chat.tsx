@@ -23,11 +23,14 @@ export function Chat(props: ChatProps) {
   const flow = useFormFlow({ form, previewMode, searchParams, sourceOrigin });
   const { state, question, transcript } = flow;
 
-  const msgEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLElement>(null);
   const themeText = contrastTextColor(form.themeColor);
 
   useEffect(() => {
-    msgEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    // Scroll only the message list. scrollIntoView would also scroll the page
+    // behind it, which makes the whole chat jump on phones when the keyboard opens.
+    const list = messagesRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
   }, [transcript]);
 
   const answer = useCallback((value: string) => flow.setAnswer(value), [flow]);
@@ -56,8 +59,8 @@ export function Chat(props: ChatProps) {
         </div>
       ) : null}
 
-      <main className="flex-1 overflow-y-auto p-3 sm:p-6" role="log" aria-live="polite" aria-atomic="false">
-        <div className="mx-auto max-w-sm space-y-3 sm:max-w-md">
+      <main ref={messagesRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6" role="log" aria-live="polite" aria-atomic="false">
+        <div className="mx-auto max-w-md space-y-4">
           {notice ? (
             <p
               role="status"
@@ -101,7 +104,6 @@ export function Chat(props: ChatProps) {
             </div>
           ) : null}
 
-          <div ref={msgEndRef} />
         </div>
       </main>
 

@@ -74,8 +74,8 @@ export function FieldInput({
   // Focus the primary control when a new question becomes active.
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (question.type === "TEXTAREA") textareaRef.current?.focus();
-      else if (question.type === "TEXT" || question.type === "CHOICE") inputRef.current?.focus();
+      if (question.type === "TEXTAREA") textareaRef.current?.focus({ preventScroll: true });
+      else if (question.type === "TEXT" || question.type === "CHOICE") inputRef.current?.focus({ preventScroll: true });
     }, 50);
     return () => clearTimeout(timer);
   }, [question.id, question.type]);

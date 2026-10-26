@@ -1,8 +1,16 @@
 import { Suspense } from "react";
+import type { Viewport } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPublishedFormBySlug } from "@/modules/form/form.service";
 import { ChatFrame } from "@/modules/chat/chat-frame";
+
+// Phones shrink the page itself when the keyboard opens, instead of panning over it.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
 
 export default function EmbedPage({
   params,
@@ -12,14 +20,8 @@ export default function EmbedPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <div className="flex h-dvh flex-col bg-white">
-      <Suspense fallback={<div className="h-full w-full bg-background flex items-center justify-center">
-  <div className="flex flex-col items-center gap-3">
-    <div className="size-10 rounded-full border-4 border-muted" />
-    <div className="size-10 absolute rounded-full border-4 border-primary border-t-transparent animate-spin" />
-    <p className="text-sm text-muted-foreground">Loading form...</p>
-  </div>
-</div>}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
+      <Suspense fallback={<div className="h-full w-full animate-pulse bg-white" />}>
         <EmbedChat params={params} searchParams={searchParams} />
       </Suspense>
     </div>

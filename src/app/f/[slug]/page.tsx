@@ -4,6 +4,15 @@ import { connection } from "next/server";
 import { getPublishedFormBySlug } from "@/modules/form/form.service";
 import { ChatFrame } from "@/modules/chat/chat-frame";
 
+import type { Viewport } from "next";
+
+// Phones shrink the page itself when the keyboard opens, instead of panning over it.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
+
 export default function FormPage({
   params,
   searchParams,
@@ -12,15 +21,9 @@ export default function FormPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <div className="m-0 min-h-screen bg-[#f8fafc] font-sans antialiased text-slate-900 flex items-center justify-center p-4">
-      <div className="h-[min(720px,calc(100dvh-5rem))] w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <Suspense fallback={<div className="h-full w-full bg-white flex items-center justify-center">
-  <div className="flex flex-col items-center gap-3">
-    <div className="size-8 rounded-full border-3 border-slate-200" />
-    <div className="size-8 absolute rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
-    <p className="text-sm text-slate-500">Loading chat...</p>
-  </div>
-</div>}>
+    <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#f8fafc] p-0 font-sans antialiased text-slate-900 sm:p-4">
+      <div className="h-full w-full max-w-lg overflow-hidden bg-white sm:h-[min(720px,calc(100dvh-5rem))] sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm">
+        <Suspense fallback={<div className="h-full w-full animate-pulse bg-white" />}>
           <FormChat params={params} searchParams={searchParams} />
         </Suspense>
       </div>
