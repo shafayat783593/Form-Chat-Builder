@@ -36,7 +36,6 @@ export interface FieldInputProps {
   disabled: boolean;
   themeColor: string;
   error?: string;
-  /** Send the answer straight away instead of waiting for the Send button. */
   autoSubmit?: boolean;
 }
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPublishedFormBySlug } from "@/modules/form/form.service";
 import { ChatFrame } from "@/modules/chat/chat-frame";
+import { ViewportBox } from "@/modules/chat/viewport-box";
 
 import type { Viewport } from "next";
 
@@ -21,13 +22,13 @@ export default function FormPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#f8fafc] p-0 font-sans antialiased text-slate-900 sm:p-4">
-      <div className="h-full w-full max-w-lg overflow-hidden bg-white sm:h-[min(720px,calc(100dvh-5rem))] sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm">
+    <ViewportBox className="flex items-center justify-center overflow-hidden bg-[#f8fafc] p-0 font-sans antialiased text-slate-900 sm:p-4">
+      <div className="h-full w-full max-w-lg overflow-hidden bg-white sm:h-[min(720px,calc(100%-2rem))] sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm">
         <Suspense fallback={<div className="h-full w-full animate-pulse bg-white" />}>
           <FormChat params={params} searchParams={searchParams} />
         </Suspense>
       </div>
-    </div>
+    </ViewportBox>
   );
 }
 

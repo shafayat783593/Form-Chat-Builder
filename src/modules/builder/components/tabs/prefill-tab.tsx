@@ -15,10 +15,6 @@ interface PrefillTabProps {
   onUpdateQuestion: BuilderActions["updateQuestion"];
 }
 
-/**
- * Lets the owner give a question a "prefill key". A link like
- * /f/my-form?email=a@b.com then fills in that question for the visitor.
- */
 export function PrefillTab({ questions, slug, onUpdateQuestion }: PrefillTabProps) {
   const origin = useAppOrigin();
   const questionsWithKey = questions.filter((q) => q.prefillKey);

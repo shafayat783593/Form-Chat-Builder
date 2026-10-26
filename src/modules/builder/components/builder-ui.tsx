@@ -92,10 +92,6 @@ export function CopyButton({ text, label = "Copy", className }: CopyButtonProps)
   );
 }
 
-// Text
-
-
-/** Small uppercase heading used above a group of controls. */
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
     <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">

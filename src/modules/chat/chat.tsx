@@ -13,7 +13,6 @@ interface ChatProps {
   previewMode?: boolean;
   searchParams?: UseFormFlowArgs["searchParams"];
   sourceOrigin?: string;
-  /** A short confirmation shown at the top of the conversation. */
   notice?: string | null;
 }
 
@@ -32,6 +31,20 @@ export function Chat(props: ChatProps) {
     const list = messagesRef.current;
     if (list) list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
   }, [transcript]);
+
+  
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    function keepLatestVisible() {
+      const list = messagesRef.current;
+      if (list) list.scrollTo({ top: list.scrollHeight });
+    }
+
+    viewport.addEventListener("resize", keepLatestVisible);
+    return () => viewport.removeEventListener("resize", keepLatestVisible);
+  }, []);
 
   const answer = useCallback((value: string) => flow.setAnswer(value), [flow]);
   const send = useCallback((value?: string) => flow.submit(value), [flow]);

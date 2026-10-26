@@ -6,7 +6,6 @@ interface BuilderShellProps {
   className?: string;
 }
 
-/** The full-height frame that holds the top bar and the three panels. */
 export function BuilderShell({ children, className }: BuilderShellProps) {
   return (
     <div

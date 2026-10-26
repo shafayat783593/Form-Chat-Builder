@@ -14,13 +14,7 @@ function firstValue(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-/**
- * Reads the prefill answers from the query string.
- *
- * Only questions that have a `prefillKey` are considered, and a value is only
- * used when it passes the same validation the server applies. An invalid
- * prefill is ignored, so the question is asked normally.
- */
+
 export function collectPrefill(
   questions: PrefillableQuestion[],
   searchParams: SearchParams | undefined,

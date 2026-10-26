@@ -11,7 +11,6 @@ interface LiveBannerProps {
   responsesHref?: string;
 }
 
-/** The dark strip shown under the top bar while the form is published. */
 export function LiveBanner({ formUrl, responseCount, onShare, responsesHref }: LiveBannerProps) {
   const { copied, copy } = useCopy(formUrl);
 

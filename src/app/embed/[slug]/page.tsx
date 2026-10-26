@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPublishedFormBySlug } from "@/modules/form/form.service";
 import { ChatFrame } from "@/modules/chat/chat-frame";
+import { ViewportBox } from "@/modules/chat/viewport-box";
 
 // Phones shrink the page itself when the keyboard opens, instead of panning over it.
 export const viewport: Viewport = {
@@ -20,11 +21,11 @@ export default function EmbedPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
+    <ViewportBox className="flex flex-col overflow-hidden bg-white">
       <Suspense fallback={<div className="h-full w-full animate-pulse bg-white" />}>
         <EmbedChat params={params} searchParams={searchParams} />
       </Suspense>
-    </div>
+    </ViewportBox>
   );
 }
 
