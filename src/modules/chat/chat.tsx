@@ -56,8 +56,8 @@ export function Chat(props: ChatProps) {
         </div>
       ) : null}
 
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6" role="log" aria-live="polite" aria-atomic="false">
-        <div className="mx-auto max-w-md space-y-4">
+      <main className="flex-1 overflow-y-auto p-3 sm:p-6" role="log" aria-live="polite" aria-atomic="false">
+        <div className="mx-auto max-w-sm space-y-3 sm:max-w-md">
           {notice ? (
             <p
               role="status"
